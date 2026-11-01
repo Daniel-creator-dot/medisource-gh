@@ -16,7 +16,7 @@ Regulatory approvals, live payments, and real clinician listings are still not p
 
 Redis is not included. The API runs without it. Celery has no worker on this deploy, and nothing in the current release sends a background task during a request.
 
-The API release command migrates the database and loads the labelled sample catalogue. Sample accounts use the password `Demo-Only-Change-Me-1`.
+Each API start migrates the database and loads the labelled sample catalogue. Render's free plan does not run a separate release command. Sample accounts use the password `Demo-Only-Change-Me-1`.
 
 - `ada.customer@sample.medisource.test`
 - `kofi.supplier@sample.medisource.test`
