@@ -1,0 +1,58 @@
+name: medisource
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: medisource
+      POSTGRES_USER: medisource
+      POSTGRES_PASSWORD: medisource
+    ports:
+      - "5432:5432"
+    volumes:
+      - medisource_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medisource -d medisource"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      DJANGO_SECRET_KEY: local-docker-secret-change-me
+      DJANGO_DEBUG: "true"
+      DJANGO_SETTINGS_MODULE: config.settings.local
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,backend
+      DATABASE_URL: postgres://medisource:medisource@postgres:5432/medisource
+      REDIS_URL: redis://redis:6379/0
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+      CSRF_TRUSTED_ORIGINS: http://localhost:3000
+      WEB_ORIGIN: http://localhost:3000
+      SEED_DEMO_PASSWORD: Demo-Only-Change-Me-1
+      MFA_REQUIRED_FOR_PRIVILEGED: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py seed_demo &&
+             python manage.py runserver 0.0.0.0:8000"
+
+volumes:
+  medisource_pg:

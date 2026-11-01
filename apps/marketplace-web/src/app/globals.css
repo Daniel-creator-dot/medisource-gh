@@ -1,0 +1,28 @@
+@import "tailwindcss";
+@import "@medisource/design-tokens/tokens.css";
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --color-navy: var(--ms-navy);
+  --color-navy-800: var(--ms-navy-800);
+  --color-teal: var(--ms-teal);
+  --color-teal-dark: var(--ms-teal-dark);
+  --color-care: var(--ms-care);
+  --color-canvas: var(--ms-canvas);
+  --color-ink: var(--ms-ink);
+  --color-muted: var(--ms-muted);
+  --color-line: var(--ms-line);
+  --color-danger: var(--ms-danger);
+  --color-success: var(--ms-success);
+  --color-warning: var(--ms-warning);
+}
+
+body {
+  background: var(--ms-canvas);
+  color: var(--ms-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ms-teal);
+  outline-offset: 2px;
+}
