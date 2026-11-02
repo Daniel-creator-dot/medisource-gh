@@ -120,6 +120,22 @@ def public_categories():
     )
 
 
+def filter_suppliers(params):
+    queryset = public_suppliers()
+    query = (params.get("q") or "").strip()
+    if query:
+        queryset = queryset.filter(
+            Q(display_name__icontains=query)
+            | Q(summary__icontains=query)
+            | Q(city__icontains=query)
+            | Q(region__icontains=query)
+        )
+    region = (params.get("region") or "").strip()
+    if region:
+        queryset = queryset.filter(region__iexact=region)
+    return queryset
+
+
 def public_suppliers():
     return (
         Supplier.objects.filter(

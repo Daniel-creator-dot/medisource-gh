@@ -5,6 +5,7 @@ const columns = [
     title: "Marketplace",
     links: [
       ["/shop", "Shop products"],
+      ["/cart", "Cart"],
       ["/suppliers", "Suppliers"],
       ["/categories", "Categories"],
       ["/professionals", "Professionals"],

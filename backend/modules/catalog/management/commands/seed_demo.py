@@ -224,6 +224,9 @@ class Command(BaseCommand):
             suppliers = {"harbour": harbour, "savanna": savanna}
             for product in PRODUCTS:
                 self._product(product, categories, suppliers)
+            from modules.professionals.services import ensure_profession_roles
+
+            ensure_profession_roles()
             record_audit(action="catalog.demo_seeded", resource_type="catalog", metadata={"products": len(PRODUCTS)})
 
         self.stdout.write(self.style.WARNING("Sample data only. These accounts and listings are fictional."))

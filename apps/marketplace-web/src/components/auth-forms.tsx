@@ -3,8 +3,9 @@
 import { MediSourceApiError } from "@medisource/api-client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button, Input, Label } from "@medisource/ui";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { cloneElement, isValidElement, useId, useState, type ReactElement, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -23,6 +24,7 @@ const registration = credentials.extend({
 
 export function LoginForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [mfaToken, setMfaToken] = useState<string | null>(null);
   const [code, setCode] = useState("");
@@ -39,6 +41,8 @@ export function LoginForm() {
         setMfaToken(result.data.mfa_token);
         return;
       }
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+      await queryClient.invalidateQueries({ queryKey: ["cart"] });
       router.push("/account/dashboard");
       router.refresh();
     } catch (caught) {
@@ -53,6 +57,8 @@ export function LoginForm() {
     setError(null);
     try {
       await browserApi.verifyMfa(mfaToken, code);
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+      await queryClient.invalidateQueries({ queryKey: ["cart"] });
       router.push("/account/dashboard");
       router.refresh();
     } catch (caught) {
@@ -96,6 +102,7 @@ export function LoginForm() {
 
 export function RegisterForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const form = useForm<z.infer<typeof registration>>({
     resolver: zodResolver(registration),
@@ -106,6 +113,8 @@ export function RegisterForm() {
     setError(null);
     try {
       await browserApi.register(values);
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+      await queryClient.invalidateQueries({ queryKey: ["cart"] });
       router.push("/account/dashboard");
       router.refresh();
     } catch (caught) {
@@ -244,11 +253,24 @@ function Field({
   error?: string;
   children: ReactNode;
 }) {
+  const id = useId();
+  const errorId = `${id}-error`;
+  const control = isValidElement(children)
+    ? cloneElement(children as ReactElement<{ id?: string; "aria-describedby"?: string; "aria-invalid"?: boolean }>, {
+        id,
+        "aria-invalid": error ? true : undefined,
+        "aria-describedby": error ? errorId : undefined,
+      })
+    : children;
   return (
     <div className="grid gap-1.5">
-      <Label>{label}</Label>
-      {children}
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      <Label htmlFor={id}>{label}</Label>
+      {control}
+      {error ? (
+        <p id={errorId} className="text-sm text-danger">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

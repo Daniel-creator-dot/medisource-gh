@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { AddToCart } from "@/components/add-to-cart";
 import { getProduct } from "@/lib/catalog";
 import { formatMoney } from "@/lib/format";
 
@@ -72,9 +73,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   <p className="mt-1 text-sm text-muted">
                     {listing.warehouse_name} · {listing.delivery_zones.join(", ")}
                   </p>
-                  {listing.purchase_block_reason ? (
-                    <p className="mt-3 text-sm text-warning">{listing.purchase_block_reason}</p>
-                  ) : null}
+                  <AddToCart
+                    listingId={listing.id}
+                    minimum={listing.minimum_order_quantity}
+                    stock={listing.stock_quantity}
+                    blocked={listing.purchase_block_reason}
+                  />
                 </li>
               ))}
             </ul>

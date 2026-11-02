@@ -2,7 +2,7 @@
 
 import { MediSourceApiError } from "@medisource/api-client";
 import { Button } from "@medisource/ui";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
@@ -20,6 +20,7 @@ export function AccountFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const me = useQuery({ queryKey: ["me"], queryFn: () => browserApi.me() });
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (me.error instanceof MediSourceApiError && me.error.status === 401) {
@@ -29,6 +30,7 @@ export function AccountFrame({ children }: { children: ReactNode }) {
 
   async function logout() {
     await browserApi.logout();
+    queryClient.clear();
     router.replace("/");
     router.refresh();
   }

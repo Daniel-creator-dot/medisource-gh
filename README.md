@@ -2,14 +2,16 @@
 
 Healthcare marketplace for Ghana. This repository is the first working slice: a Django API, a Next.js public site and customer account, and a labelled sample catalogue. It is not a live pharmacy, clinic, or payment service.
 
-The sample suppliers and products are fictional. Checkout is disabled for them. Pharmaceutical checkout stays closed. No clinicians are listed.
+The sample suppliers and products are fictional. They can be saved in a cart, and checkout is disabled for them. Pharmaceutical checkout stays closed. No clinicians are listed.
 
 ## What works now
 
 - Customer registration, sign-in, email verification tokens, password reset, and authenticator enrollment.
 - Browser sessions use HttpOnly cookies. A future mobile app can request bearer tokens with `X-Client: mobile`.
 - Organizations are isolated. A member cannot read another organization's private supplier notes.
-- Public catalogue, categories, and supplier storefronts are loaded from the database.
+- Public catalogue with search, category and supplier filters, product details, and supplier directory.
+- Shopping cart for signed-in customers and guests. Checkout stays closed, including for sample rows and authorized pharmaceuticals.
+- Healthcare professional directory. Profession categories are seeded. No sample clinicians are listed.
 - Address book, notifications, and the contact form.
 - OpenAPI docs at `/api/docs/`.
 

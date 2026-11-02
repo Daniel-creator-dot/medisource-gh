@@ -4,6 +4,8 @@ import type {
   Envelope,
   ProductCard,
   ProductDetail,
+  ProfessionalCard,
+  ProfessionalDirectory,
   SupplierCard,
   SupplierDetail,
 } from "@medisource/shared-types";
@@ -27,8 +29,30 @@ export function getProduct(slug: string) {
   return apiRequest<Envelope<ProductDetail>>(`/api/v1/catalog/products/${slug}/`);
 }
 
-export function getSuppliers() {
-  return apiRequest<Envelope<SupplierCard[]>>("/api/v1/catalog/suppliers/");
+export function getSuppliers(search: Record<string, string | undefined> = {}) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(search)) {
+    if (value) {
+      params.set(key, value);
+    }
+  }
+  const query = params.toString();
+  return apiRequest<Envelope<SupplierCard[]>>(`/api/v1/catalog/suppliers/${query ? `?${query}` : ""}`);
+}
+
+export function getProfessionRoles() {
+  return apiRequest<Envelope<ProfessionalDirectory>>("/api/v1/professionals/roles/");
+}
+
+export function getProfessionals(search: Record<string, string | undefined>) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(search)) {
+    if (value) {
+      params.set(key, value);
+    }
+  }
+  const query = params.toString();
+  return apiRequest<Envelope<ProfessionalCard[]>>(`/api/v1/professionals/${query ? `?${query}` : ""}`);
 }
 
 export function getSupplier(slug: string) {

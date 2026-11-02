@@ -105,9 +105,9 @@ export default async function HomePage() {
           <InfoPanel
             icon={<Stethoscope className="h-5 w-5" />}
             title="Find a healthcare professional"
-            body="Profiles will appear only after a person reviews credentials. Uploading a document will not verify anyone, and expired credentials will block the related services. No sample clinicians are listed."
+            body="Profiles appear only after a person reviews a current credential. The directory lists professions and regions now. It does not list sample clinicians, licences, or ratings."
             href="/professionals"
-            action="How verification will work"
+            action="Open the directory"
           />
           <InfoPanel
             icon={<Building2 className="h-5 w-5" />}
@@ -125,7 +125,7 @@ export default async function HomePage() {
           {[
             ["Live", "Browse eligible supplies from the public catalogue."],
             ["Next", "A reviewer verifies a supplier. Upload alone does not approve them."],
-            ["Next", "Checkout rechecks policy, stock, and price, then a signed webhook settles payment."],
+            ["Live", "Save a listing in your cart. Checkout stays closed for sample rows and pharmaceuticals."],
             ["Next", "A verified professional offers only the services their credential allows."],
           ].map(([state, text], index) => (
             <li key={text} className="rounded-2xl border border-line bg-white p-5">

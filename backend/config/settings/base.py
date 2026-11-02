@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     "modules.identity",
     "modules.organizations",
     "modules.catalog",
+    "modules.commerce",
+    "modules.professionals",
     "modules.audit",
     "modules.notifications",
 ]
@@ -125,6 +127,7 @@ FORCE_SEED_DEMO = env("FORCE_SEED_DEMO")
 
 AUTH_ACCESS_COOKIE = "ms_access"
 AUTH_REFRESH_COOKIE = "ms_refresh"
+CART_COOKIE = "ms_cart"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [

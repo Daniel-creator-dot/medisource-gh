@@ -169,3 +169,58 @@ export type SupplierListing = {
 export type SupplierDetail = SupplierCard & {
   listings: SupplierListing[];
 };
+
+export type CartLine = {
+  id: string;
+  quantity: number;
+  listing_id: string;
+  sku: string;
+  price_amount: string;
+  line_total: string;
+  currency: string;
+  stock_quantity: number;
+  minimum_order_quantity: number;
+  product_name: string;
+  product_slug: string;
+  supplier_name: string;
+  supplier_slug: string;
+  is_demo: boolean;
+  demo_label: string | null;
+  purchase_block_reason: string | null;
+};
+
+export type Cart = {
+  id: string | null;
+  line_count: number;
+  item_count: number;
+  lines: CartLine[];
+  subtotal: Money;
+  checkout_open: boolean;
+  checkout_message: string;
+};
+
+export type ProfessionRole = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+};
+
+export type ProfessionalDirectory = {
+  roles: ProfessionRole[];
+  regions: string[];
+  notice: string;
+};
+
+export type ProfessionalCard = {
+  id: string;
+  display_name: string;
+  slug: string;
+  city: string;
+  region: string;
+  summary: string;
+  role_name: string;
+  role_slug: string;
+  verification_status: string;
+  credential_expires_on: string;
+};

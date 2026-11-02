@@ -1,4 +1,4 @@
-import type { ApiErrorBody, Envelope, SessionPayload, User } from "@medisource/shared-types";
+import type { ApiErrorBody, Cart, Envelope, SessionPayload, User } from "@medisource/shared-types";
 
 export class MediSourceApiError extends Error {
   status: number;
@@ -146,5 +146,30 @@ export class MediSourceClient {
   private async change<T>(path: string, body: unknown): Promise<T> {
     const csrfToken = await this.csrf();
     return apiRequest<T>(path, { method: "PATCH", body, csrfToken });
+  }
+
+  private async remove<T>(path: string): Promise<T> {
+    const csrfToken = await this.csrf();
+    return apiRequest<T>(path, { method: "DELETE", csrfToken });
+  }
+
+  cart() {
+    return apiRequest<Envelope<Cart>>("/api/v1/cart/");
+  }
+
+  addCartLine(listingId: string, quantity: number) {
+    return this.mutate<Envelope<Cart>>("/api/v1/cart/lines/", { listing_id: listingId, quantity });
+  }
+
+  updateCartLine(lineId: string, quantity: number) {
+    return this.change<Envelope<Cart>>(`/api/v1/cart/lines/${lineId}/`, { quantity });
+  }
+
+  removeCartLine(lineId: string) {
+    return this.remove<Envelope<Cart>>(`/api/v1/cart/lines/${lineId}/`);
+  }
+
+  checkoutCart() {
+    return this.mutate<Envelope<{ checkout_open: boolean }>>("/api/v1/cart/checkout/", {});
   }
 }

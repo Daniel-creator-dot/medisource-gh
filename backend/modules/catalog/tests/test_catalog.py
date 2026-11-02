@@ -106,6 +106,9 @@ def test_product_search_and_pagination(api):
     )
     found = api.get("/api/v1/catalog/products/?q=therm")
     assert [item["slug"] for item in found.json()["data"]] == ["thermometer"]
+    suppliers = api.get("/api/v1/catalog/suppliers/?q=Accra")
+    assert suppliers.status_code == 200
+    assert suppliers.json()["data"][0]["region"] == "Greater Accra"
     page = api.get("/api/v1/catalog/products/?page_size=1&ordering=name")
     assert page.json()["meta"]["pages"] == 2
     assert page.json()["meta"]["count"] == 2

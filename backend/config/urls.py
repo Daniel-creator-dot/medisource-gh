@@ -14,6 +14,8 @@ urlpatterns = [
     path("api/v1/", include("modules.identity.account_urls")),
     path("api/v1/", include("modules.organizations.urls")),
     path("api/v1/catalog/", include("modules.catalog.urls")),
+    path("api/v1/cart/", include("modules.commerce.urls")),
+    path("api/v1/professionals/", include("modules.professionals.urls")),
     path("api/v1/", include("modules.notifications.urls")),
 ]
 

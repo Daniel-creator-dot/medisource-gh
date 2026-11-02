@@ -15,9 +15,9 @@ from modules.catalog.serializers import (
 from modules.catalog.services import (
     filter_products,
     get_public_product,
+    filter_suppliers,
     get_public_supplier,
     public_categories,
-    public_suppliers,
 )
 from modules.organizations.services import active_membership
 
@@ -54,7 +54,7 @@ class SupplierListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        queryset = public_suppliers()
+        queryset = filter_suppliers(request.query_params)
         paginator = EnvelopePagination()
         page = paginator.paginate_queryset(queryset, request)
         return paginator.get_paginated_response(SupplierCardSerializer(page, many=True).data)

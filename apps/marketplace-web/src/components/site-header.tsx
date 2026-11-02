@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AccountNav } from "@/components/account-nav";
+import { CartLink } from "@/components/cart-link";
 import { Logo } from "@/components/logo";
 import { MobileNav } from "@/components/mobile-nav";
 
@@ -25,6 +26,7 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
+          <CartLink />
           <AccountNav />
           <MobileNav />
         </div>

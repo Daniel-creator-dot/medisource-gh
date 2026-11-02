@@ -63,6 +63,9 @@ def _issue_session(request, user, status=200):
         return ok(_session_payload(user, access=access, refresh=refresh), status=status)
     response = ok(_session_payload(user), status=status)
     set_auth_cookies(response, access, refresh)
+    from modules.commerce.services import claim_guest_cart
+
+    claim_guest_cart(request, user, response)
     return response
 
 
