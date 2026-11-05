@@ -28,6 +28,9 @@ if env("ALLOW_SQLITE_DEV") and not env("DATABASE_URL", default=""):
     }
 else:
     DATABASES = {"default": env.db("DATABASE_URL")}
+    if "postgresql" in DATABASES["default"]["ENGINE"]:
+        options = DATABASES["default"].setdefault("OPTIONS", {})
+        options.setdefault("connect_timeout", 5)
 
 REDIS_URL = env("REDIS_URL", default="")
 
@@ -57,7 +60,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
+    "common.middleware.ApiSafeCsrfMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",

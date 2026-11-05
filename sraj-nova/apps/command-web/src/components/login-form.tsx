@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { readJson } from "@/lib/read-json";
+
 const schema = z.object({
   email: z.email("Enter a valid email."),
   password: z.string().min(1, "Enter the demonstration password."),
@@ -13,9 +15,18 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+async function fetchApi(path: string, init?: RequestInit) {
+  try {
+    return await fetch(path, { ...init, signal: AbortSignal.timeout(20000) });
+  } catch {
+    throw new Error("The API did not answer. Wait a moment and try again.");
+  }
+}
+
 async function csrfToken() {
-  const response = await fetch("/api/v1/auth/csrf/", { credentials: "include", cache: "reload" });
-  const body = (await response.json()) as { data: { csrf_token: string } };
+  const response = await fetchApi("/api/v1/auth/csrf/", { credentials: "include", cache: "reload" });
+  const body = await readJson<{ data?: { csrf_token?: string } }>(response);
+  if (!body?.data?.csrf_token) throw new Error("Sign-in could not reach the API.");
   return body.data.csrf_token;
 }
 
@@ -28,13 +39,14 @@ export function LoginForm() {
   const login = useMutation({
     mutationFn: async (values: FormValues) => {
       const token = await csrfToken();
-      const response = await fetch("/api/v1/auth/login/", {
+      const response = await fetchApi("/api/v1/auth/login/", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json", "X-CSRFToken": token },
         body: JSON.stringify(values),
       });
-      const body = (await response.json()) as { error?: { message: string }; data?: { user?: { role: string } } };
+      const body = await readJson<{ error?: { message: string }; data?: { user?: { role: string } } }>(response);
+      if (!body) throw new Error("Sign-in could not reach the API.");
       if (!response.ok) throw new Error(body.error?.message || "Sign-in failed.");
       return body.data?.user?.role;
     },
