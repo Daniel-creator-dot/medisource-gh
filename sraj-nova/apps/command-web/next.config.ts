@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   agentRules: false,
   skipTrailingSlashRedirect: true,
   async rewrites() {
-    return [{ source: "/api/:path*", destination: `${api}/api/:path*` }];
+    return { fallback: [{ source: "/api/:path*", destination: `${api}/api/:path*` }] };
   },
 };
 
