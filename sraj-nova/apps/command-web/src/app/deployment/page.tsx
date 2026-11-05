@@ -21,7 +21,8 @@ export default async function DeploymentPage() {
   const canAssign = me.data?.role === "agency_owner" || me.data?.role === "agency_operations" || me.data?.role === "agency_finance";
   return (
     <Shell>
-      <h1 className="text-2xl font-semibold">Deployment engine</h1>
+      <p className="text-sm font-semibold tracking-[0.16em] text-[var(--orange)]">COVERAGE</p>
+      <h1 className="display mt-1 text-4xl font-bold">Deployment engine</h1>
       <p className="mt-1 text-sm text-[var(--muted)]">
         Open shifts are listed from stored assignments. A recommendation requires the position skill and at least 11 hours between shifts. That rest gap is an operational setting. Assigning a blocked worker is refused.
       </p>
@@ -29,7 +30,7 @@ export default async function DeploymentPage() {
       <div className="mt-4 space-y-4">
         {(result.data ?? []).length === 0 ? <p>No unfilled shifts are stored for today.</p> : null}
         {(result.data ?? []).map((shift) => (
-          <article key={shift.shift_id} className="rounded-lg border border-[var(--line)] bg-[var(--card)] p-4">
+          <article key={shift.shift_id} className="panel p-4">
             <h2 className="font-semibold">{shift.position}</h2>
             <p className="text-sm text-[var(--muted)]">{shift.client_name}, {shift.site_name}, {shift.starts_at}–{shift.ends_at}. Skill: {shift.required_skill}.</p>
             <h3 className="mt-3 text-sm font-medium">Recommended</h3>

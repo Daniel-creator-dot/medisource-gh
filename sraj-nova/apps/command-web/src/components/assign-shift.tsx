@@ -30,7 +30,7 @@ export function AssignShift({ shiftId, employeeId, name }: { shiftId: string; em
 
   return (
     <div className="mt-2">
-      <button type="button" onClick={assign} disabled={pending} className="rounded bg-[var(--orange)] px-3 py-1 text-sm text-white disabled:opacity-60">
+      <button type="button" onClick={assign} disabled={pending} className="rounded-full bg-[var(--orange)] px-3 py-1 text-sm font-semibold text-white disabled:opacity-60">
         {pending ? "Assigning…" : `Assign ${name}`}
       </button>
       {message ? <p className="mt-1 text-sm text-red-700">{message}</p> : null}

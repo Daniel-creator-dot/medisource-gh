@@ -17,13 +17,13 @@ export default async function ClientPage({ params }: { params: Promise<{ slug: s
         <h1 className="text-2xl font-semibold">Client not available</h1>
       ) : (
         <>
-          <h1 className="text-2xl font-semibold">{result.data.legal_name}</h1>
+          <h1 className="display text-4xl font-bold">{result.data.legal_name}</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
             {result.data.sector}. {result.data.demo_label}
           </p>
           <ul className="mt-6 space-y-3">
             {result.data.sites.map((site) => (
-              <li key={site.id} className="rounded-lg border border-[var(--line)] bg-[var(--card)] p-4">
+              <li key={site.id} className="panel p-4">
                 <p className="font-medium">{site.name}</p>
                 <p className="text-sm text-[var(--muted)]">
                   {site.city}, {site.region}

@@ -17,10 +17,11 @@ export default async function EmployeesPage() {
   const result = await apiGet<Person[]>("/employees/");
   return (
     <Shell>
-      <h1 className="text-2xl font-semibold">Workforce</h1>
+      <p className="text-sm font-semibold tracking-[0.16em] text-[var(--orange)]">PEOPLE</p>
+      <h1 className="display mt-1 text-4xl font-bold">Workforce</h1>
       <p className="mt-1 text-sm text-[var(--muted)]">Open a person for the 360° record. Pay and restricted notes stay with the agency and the worker.</p>
       {result.status === 403 ? <p className="mt-3">{result.message}</p> : null}
-      <div className="mt-4 overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--card)]">
+      <div className="sheet mt-4">
         <table className="min-w-full text-left text-sm">
           <thead className="border-b border-[var(--line)] text-[var(--muted)]">
             <tr>

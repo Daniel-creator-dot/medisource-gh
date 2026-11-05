@@ -7,10 +7,11 @@ export default async function AccessPage() {
   const result = await apiGet<Account[]>("/auth/users/");
   return (
     <Shell>
-      <h1 className="text-2xl font-semibold">Access</h1>
+      <p className="text-sm font-semibold tracking-[0.16em] text-[var(--orange)]">ACCESS</p>
+      <h1 className="display mt-1 text-4xl font-bold">Access</h1>
       <p className="mt-1 text-sm text-[var(--muted)]">Agency owners can review accounts. This screen does not change roles or reset passwords.</p>
       {result.status === 403 ? <p className="mt-3">{result.message}</p> : null}
-      <div className="mt-4 overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--card)]">
+      <div className="sheet mt-4">
         <table className="min-w-full text-left text-sm">
           <thead className="border-b border-[var(--line)] text-[var(--muted)]">
             <tr>

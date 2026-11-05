@@ -25,22 +25,23 @@ export default async function FinancePage() {
   const agency = me.data?.role === "agency_owner" || me.data?.role === "agency_operations" || me.data?.role === "agency_finance";
   return (
     <Shell>
-      <h1 className="text-2xl font-semibold">Financial control center</h1>
+      <p className="text-sm font-semibold tracking-[0.16em] text-[var(--orange)]">FUNDING</p>
+      <h1 className="display mt-1 text-4xl font-bold">Financial control center</h1>
       {result.status === 403 || !data ? (
         <p className="mt-3">{result.message || "This account cannot open the financial control center."}</p>
       ) : (
         <>
           <p className="mt-2 text-sm text-[var(--muted)]">Week starting {data.week_start}. {data.basis}</p>
           <section className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <article className="rounded-lg border border-[var(--line)] bg-[var(--card)] p-4"><p className="text-sm text-[var(--muted)]">Weekly gross wages</p><p className="mt-2 text-2xl font-semibold">{data.currency} {data.weekly_gross_payroll}</p></article>
-            <article className="rounded-lg border border-[var(--line)] bg-[var(--card)] p-4"><p className="text-sm text-[var(--muted)]">Agency management fee</p><p className="mt-2 text-2xl font-semibold">{data.currency} {data.agency_fee}</p></article>
-            <article className="rounded-lg border border-[var(--line)] bg-[var(--card)] p-4"><p className="text-sm text-[var(--muted)]">Outstanding invoices</p><p className="mt-2 text-2xl font-semibold">{data.currency} {data.outstanding_invoices}</p></article>
-            {data.cash_available ? <article className="rounded-lg border border-[var(--line)] bg-[var(--card)] p-4"><p className="text-sm text-[var(--muted)]">Recorded cash</p><p className="mt-2 text-2xl font-semibold">{data.currency} {data.cash_available}</p></article> : null}
-            {data.cash_after_payroll ? <article className="rounded-lg border border-[var(--line)] bg-[var(--card)] p-4"><p className="text-sm text-[var(--muted)]">Cash after gross wages</p><p className="mt-2 text-2xl font-semibold">{data.currency} {data.cash_after_payroll}</p></article> : null}
-            <article className="rounded-lg border border-[var(--line)] bg-[var(--card)] p-4"><p className="text-sm text-[var(--muted)]">Net pay and statutory liabilities</p><p className="mt-2 text-sm">Not calculated. A qualified Ghana payroll review is required before those amounts exist.</p></article>
+            <article className="metric"><p className="text-sm text-[var(--muted)]">Weekly gross wages</p><strong>{data.currency} {data.weekly_gross_payroll}</strong></article>
+            <article className="metric"><p className="text-sm text-[var(--muted)]">Agency management fee</p><strong>{data.currency} {data.agency_fee}</strong></article>
+            <article className="metric alert"><p className="text-sm text-[var(--muted)]">Outstanding invoices</p><strong>{data.currency} {data.outstanding_invoices}</strong></article>
+            {data.cash_available ? <article className="metric"><p className="text-sm text-[var(--muted)]">Recorded cash</p><strong>{data.currency} {data.cash_available}</strong></article> : null}
+            {data.cash_after_payroll ? <article className="metric"><p className="text-sm text-[var(--muted)]">Cash after gross wages</p><strong>{data.currency} {data.cash_after_payroll}</strong></article> : null}
+            <article className="panel p-4"><p className="text-sm text-[var(--muted)]">Net pay and statutory liabilities</p><p className="mt-2 text-sm">Not calculated. A qualified Ghana payroll review is required before those amounts exist.</p></article>
           </section>
           {data.cash_note ? <p className="mt-4 text-sm">{data.cash_note}</p> : null}
-          <div className="mt-4 overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--card)]">
+          <div className="sheet mt-4">
             <table className="min-w-full text-left text-sm">
               <thead className="border-b border-[var(--line)] text-[var(--muted)]">
                 <tr>

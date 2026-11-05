@@ -21,7 +21,7 @@ type Profile = {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border border-[var(--line)] bg-[var(--card)] p-4">
+    <section className="panel p-4">
       <h2 className="font-semibold">{title}</h2>
       <div className="mt-2 text-sm">{children}</div>
     </section>
@@ -42,7 +42,7 @@ export default async function EmployeeProfilePage({ params }: { params: Promise<
   }
   return (
     <Shell>
-      <h1 className="text-2xl font-semibold">{person.first_name} {person.last_name}</h1>
+      <h1 className="display text-4xl font-bold">{person.first_name} {person.last_name}</h1>
       <p className="mt-1 text-sm text-[var(--muted)]">
         {person.agency_employee_number} · {person.status}
         {person.is_demo ? " · Synthetic demonstration record" : ""}

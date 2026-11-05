@@ -14,11 +14,11 @@ export default async function AgencyPage() {
   const result = await apiGet<Agency>("/agency/");
   return (
     <Shell>
-      <h1 className="text-2xl font-semibold">Agency</h1>
+      <h1 className="display text-4xl font-bold">Agency</h1>
       {result.status === 403 || !result.data ? (
         <p className="mt-3">{result.message || "Agency configuration is limited to agency staff."}</p>
       ) : (
-        <dl className="mt-4 grid max-w-xl gap-3 rounded-lg border border-[var(--line)] bg-[var(--card)] p-4 text-sm">
+        <dl className="panel mt-4 grid max-w-xl gap-3 p-4 text-sm">
           <div><dt className="text-[var(--muted)]">Legal name</dt><dd>{result.data.legal_name}</dd></div>
           <div><dt className="text-[var(--muted)]">Trading name</dt><dd>{result.data.trading_name}</dd></div>
           <div><dt className="text-[var(--muted)]">Country</dt><dd>{result.data.country}</dd></div>

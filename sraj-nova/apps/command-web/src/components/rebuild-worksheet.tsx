@@ -27,7 +27,7 @@ export function RebuildWorksheet() {
 
   return (
     <div className="mt-4">
-      <button type="button" onClick={rebuild} disabled={pending} className="rounded bg-[var(--navy)] px-3 py-2 text-sm text-white disabled:opacity-60">
+      <button type="button" onClick={rebuild} disabled={pending} className="rounded-full bg-[#0b1f33] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
         {pending ? "Rebuilding…" : "Rebuild this week's worksheet"}
       </button>
       {message ? <p className="mt-2 text-sm text-red-700">{message}</p> : null}

@@ -26,16 +26,16 @@ type Center = {
   };
 };
 
-const metrics: { label: string; value: (data: Center) => number }[] = [
+const metrics: { label: string; tone?: "alert"; value: (data: Center) => number }[] = [
   { label: "Active workforce", value: (data) => data.active_workforce },
   { label: "Deployed workers", value: (data) => data.deployed_workers },
   { label: "Scheduled today", value: (data) => data.scheduled_today },
   { label: "On duty", value: (data) => data.on_duty },
-  { label: "Late", value: (data) => data.late },
-  { label: "Absent", value: (data) => data.absent },
-  { label: "Unfilled shifts", value: (data) => data.unfilled_shifts },
+  { label: "Late", tone: "alert", value: (data) => data.late },
+  { label: "Absent", tone: "alert", value: (data) => data.absent },
+  { label: "Unfilled shifts", tone: "alert", value: (data) => data.unfilled_shifts },
   { label: "Pending requests", value: (data) => data.pending_staffing_requests },
-  { label: "Contracts expiring in 30 days", value: (data) => data.expiring_contracts },
+  { label: "Contracts expiring in 30 days", tone: "alert", value: (data) => data.expiring_contracts },
 ];
 
 export default async function CommandPage() {
@@ -52,48 +52,49 @@ export default async function CommandPage() {
   if (!data) return null;
   return (
     <Shell>
-      <h1 className="text-2xl font-semibold">Command center</h1>
-      <p className="mt-1 text-sm text-[var(--muted)]">
+      <p className="text-sm font-semibold tracking-[0.16em] text-[var(--orange)]">AGENCY COMMAND</p>
+      <h1 className="display mt-1 text-4xl font-bold">Command center</h1>
+      <p className="mt-2 max-w-3xl text-sm text-[var(--muted)]">
         Counts for {data.as_of}, scope {data.scope}. Late means a recorded arrival more than 10 minutes after the scheduled start. That grace period is an operational setting.
       </p>
       <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {metrics.map((metric) => (
-          <article key={metric.label} className="rounded-lg border border-[var(--line)] bg-[var(--card)] p-4">
+          <article key={metric.label} className={metric.tone === "alert" ? "metric alert" : "metric"}>
             <p className="text-sm text-[var(--muted)]">{metric.label}</p>
-            <p className="mt-2 text-3xl font-semibold">{metric.value(data)}</p>
+            <strong>{metric.value(data)}</strong>
           </article>
         ))}
       </section>
       <section className="mt-6 grid gap-4 lg:grid-cols-2">
-        <article className="rounded-lg border border-[var(--line)] bg-[var(--card)] p-4">
-          <h2 className="font-semibold">Workers by client</h2>
+        <article className="panel p-4">
+          <h2 className="display text-xl font-bold">Workers by client</h2>
           <ul className="mt-3 space-y-2 text-sm">
             {data.workers_by_client.map((row) => (
-              <li key={row.client_id} className="flex justify-between border-b border-[var(--line)] py-2">
+              <li key={row.client_id} className="flex items-center justify-between border-b border-[var(--line)] py-2">
                 <span>{row.client_name}</span>
-                <span>{row.workers}</span>
+                <span className="display text-2xl font-bold">{row.workers}</span>
               </li>
             ))}
           </ul>
         </article>
-        <article className="rounded-lg border border-[var(--line)] bg-[var(--card)] p-4">
-          <h2 className="font-semibold">Open operational alerts</h2>
+        <article className="panel p-4">
+          <h2 className="display text-xl font-bold">Open operational alerts</h2>
           <ul className="mt-3 space-y-2 text-sm">
             {data.open_alerts.map((alert) => (
-              <li key={alert.message}>{alert.message}</li>
+              <li key={alert.message} className="rounded-xl bg-[var(--canvas)] px-3 py-2">{alert.message}</li>
             ))}
           </ul>
         </article>
       </section>
-      <section className="mt-6 rounded-lg border border-[var(--line)] bg-[var(--card)] p-4">
-        <h2 className="font-semibold">Payroll and billing</h2>
-        <p className="mt-2 text-sm">{data.finance.reason}</p>
-        <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-          <div>Weekly gross wages: GHS {data.finance.weekly_gross_payroll}</div>
-          <div>Agency fee: GHS {data.finance.agency_fee_revenue}</div>
-          <div>Outstanding invoices: GHS {data.finance.outstanding_invoices}</div>
-          <div>Net pay and statutory amounts: not calculated</div>
-          {"cash_available" in data.finance ? <div>Recorded cash: GHS {data.finance.cash_available}</div> : null}
+      <section className="panel mt-6 p-4">
+        <h2 className="display text-xl font-bold">Payroll and billing</h2>
+        <p className="mt-2 text-sm text-[var(--muted)]">{data.finance.reason}</p>
+        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-xl bg-[var(--canvas)] px-3 py-3"><dt className="text-[var(--muted)]">Weekly gross wages</dt><dd className="display text-2xl font-bold">GHS {data.finance.weekly_gross_payroll}</dd></div>
+          <div className="rounded-xl bg-[var(--canvas)] px-3 py-3"><dt className="text-[var(--muted)]">Agency fee</dt><dd className="display text-2xl font-bold">GHS {data.finance.agency_fee_revenue}</dd></div>
+          <div className="rounded-xl bg-[var(--canvas)] px-3 py-3"><dt className="text-[var(--muted)]">Outstanding invoices</dt><dd className="display text-2xl font-bold">GHS {data.finance.outstanding_invoices}</dd></div>
+          <div className="rounded-xl bg-[var(--canvas)] px-3 py-3"><dt className="text-[var(--muted)]">Net pay and statutory amounts</dt><dd className="mt-1">Not calculated</dd></div>
+          {"cash_available" in data.finance ? <div className="rounded-xl bg-[var(--canvas)] px-3 py-3"><dt className="text-[var(--muted)]">Recorded cash</dt><dd className="display text-2xl font-bold">GHS {data.finance.cash_available}</dd></div> : null}
         </dl>
       </section>
     </Shell>

@@ -45,15 +45,15 @@ export function LoginForm() {
     <form className="space-y-4" onSubmit={form.handleSubmit((values) => login.mutate(values))} noValidate>
       <label className="block text-sm font-medium" htmlFor="email">
         Email
-        <input id="email" type="email" className="mt-1 w-full rounded border border-[var(--line)] bg-[var(--card)] px-3 py-2" {...form.register("email")} />
+        <input id="email" type="email" className="mt-1 w-full rounded-xl border border-[var(--line)] bg-[var(--canvas)] px-3 py-2" {...form.register("email")} />
       </label>
       {form.formState.errors.email ? <p className="text-sm text-red-700">{form.formState.errors.email.message}</p> : null}
       <label className="block text-sm font-medium" htmlFor="password">
         Password
-        <input id="password" type="password" className="mt-1 w-full rounded border border-[var(--line)] bg-[var(--card)] px-3 py-2" {...form.register("password")} />
+        <input id="password" type="password" className="mt-1 w-full rounded-xl border border-[var(--line)] bg-[var(--canvas)] px-3 py-2" {...form.register("password")} />
       </label>
       {login.error ? <p className="text-sm text-red-700">{login.error.message}</p> : null}
-      <button type="submit" disabled={login.isPending} className="rounded bg-[var(--orange)] px-4 py-2 font-medium text-white disabled:opacity-60">
+      <button type="submit" disabled={login.isPending} className="w-full rounded-full bg-[var(--orange)] px-4 py-2.5 font-semibold text-white disabled:opacity-60">
         {login.isPending ? "Signing in…" : "Sign in"}
       </button>
     </form>

@@ -18,9 +18,10 @@ export default async function ClientsPage() {
   const result = await apiGet<ClientRow[]>("/clients/");
   return (
     <Shell>
-      <h1 className="text-2xl font-semibold">Client organizations</h1>
+      <p className="text-sm font-semibold tracking-[0.16em] text-[var(--orange)]">CLIENTS</p>
+      <h1 className="display mt-1 text-4xl font-bold">Client organizations</h1>
       {result.status === 403 ? <p className="mt-3">{result.message}</p> : null}
-      <div className="mt-4 overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--card)]">
+      <div className="sheet mt-4">
         <table className="min-w-full text-left text-sm">
           <thead className="border-b border-[var(--line)] text-[var(--muted)]">
             <tr>

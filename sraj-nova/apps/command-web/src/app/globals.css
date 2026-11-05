@@ -1,29 +1,97 @@
 @import "tailwindcss";
 
 :root {
-  --navy: #0b1f33;
+  --header: #0b1f33;
   --ink: #1c2430;
-  --canvas: #f4f6f8;
+  --canvas: #eef2f5;
   --card: #ffffff;
-  --line: #d7dee6;
+  --line: #d5dee7;
   --muted: #5c6b7a;
   --orange: #e36a1e;
+  --shadow: 0 12px 30px rgba(11, 31, 51, 0.06);
 }
 
 [data-theme="dark"] {
-  --navy: #07131f;
   --ink: #e8eef4;
-  --canvas: #0b1f33;
+  --canvas: #08131f;
   --card: #12283d;
   --line: #27445d;
   --muted: #a8b7c6;
-  --orange: #e36a1e;
+  --shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
 }
 
 body {
-  background: var(--canvas);
+  background:
+    linear-gradient(180deg, rgba(227, 106, 30, 0.08), transparent 220px),
+    var(--canvas);
   color: var(--ink);
-  font-family: "Segoe UI", sans-serif;
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+}
+
+.display {
+  font-family: var(--font-display), "Segoe UI", sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(180deg, #000, transparent 85%);
+}
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.metric {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding: 1rem 1.1rem 1rem 1.25rem;
+}
+
+.metric::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--header);
+}
+
+.metric.alert::before {
+  background: var(--orange);
+}
+
+.metric strong {
+  display: block;
+  margin-top: 0.45rem;
+  font-family: var(--font-display), "Segoe UI", sans-serif;
+  font-size: 2.1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.sheet {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.sheet th {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 a:focus-visible,

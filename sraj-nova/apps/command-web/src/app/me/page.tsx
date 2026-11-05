@@ -16,11 +16,11 @@ export default async function MyRecordPage() {
   const record = result.data;
   return (
     <Shell>
-      <h1 className="text-2xl font-semibold">My employment record</h1>
+      <h1 className="display text-4xl font-bold">My employment record</h1>
       {result.status === 403 || !record ? (
         <p className="mt-3">{result.message || "This account is not linked to an employee record."}</p>
       ) : (
-        <dl className="mt-4 max-w-xl space-y-2 rounded-lg border border-[var(--line)] bg-[var(--card)] p-4 text-sm">
+        <dl className="panel mt-4 max-w-xl space-y-2 p-4 text-sm">
           <div>Employee number: {record.agency_employee_number}</div>
           <div>Name: {record.first_name} {record.last_name}</div>
           <div>Status: {record.status}</div>
