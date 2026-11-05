@@ -4,8 +4,20 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
-const sans = Barlow({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-sans" });
-const display = Barlow_Condensed({ subsets: ["latin"], weight: ["600", "700"], variable: "--font-display" });
+const sans = Barlow({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+  display: "swap",
+  preload: false,
+});
+const display = Barlow_Condensed({
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  variable: "--font-display",
+  display: "swap",
+  preload: false,
+});
 
 export const metadata: Metadata = {
   title: "SRAJ NOVA Workforce ERP",
