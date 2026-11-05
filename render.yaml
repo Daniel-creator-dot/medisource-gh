@@ -1,13 +1,13 @@
-# Free Render blueprint for the MediSource GH demo.
-# Free web services sleep after 15 minutes without traffic.
-# The free Postgres database expires 30 days after it is created.
+# SRAJ NOVA Workforce ERP on the existing free Render services.
+# Service names stay the same so this does not create extra services.
+# Free web services sleep after 15 minutes. The free Postgres database expires 30 days after creation.
 
 services:
   - type: web
     name: medisource-gh-api
     runtime: python
     plan: free
-    rootDir: backend
+    rootDir: sraj-nova/backend
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
     startCommand: python manage.py migrate && python manage.py seed_demo && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 120
     healthCheckPath: /api/v1/health/
@@ -30,8 +30,8 @@ services:
         value: https://medisource-gh-web.onrender.com
       - key: CSRF_TRUSTED_ORIGINS
         value: https://medisource-gh-web.onrender.com
-      - key: MFA_REQUIRED_FOR_PRIVILEGED
-        value: "true"
+      - key: MFA_REQUIRED_FOR_AGENCY_OWNER
+        value: "false"
       - key: FORCE_SEED_DEMO
         value: "true"
       - key: SEED_DEMO_PASSWORD
@@ -41,17 +41,14 @@ services:
     name: medisource-gh-web
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build --workspace @medisource/marketplace-web
-    startCommand: npm exec --workspace @medisource/marketplace-web -- next start -H 0.0.0.0 -p $PORT
+    rootDir: sraj-nova/apps/command-web
+    buildCommand: npm install && npm run build
+    startCommand: npx next start -H 0.0.0.0 -p $PORT
     envVars:
       - key: NODE_VERSION
         value: "24.22.1"
-      - key: NEXT_PUBLIC_API_URL
+      - key: API_URL
         value: https://medisource-gh-api.onrender.com
-      - key: API_URL_INTERNAL
-        value: https://medisource-gh-api.onrender.com
-      - key: NEXT_PUBLIC_ENVIRONMENT
-        value: render
 
 databases:
   - name: medisource-gh-db

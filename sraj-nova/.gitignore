@@ -1,0 +1,8 @@
+backend/.venv/
+backend/dev.sqlite3
+backend/staticfiles/
+backend/__pycache__/
+apps/command-web/node_modules/
+apps/command-web/.next/
+.env
+*.pyc

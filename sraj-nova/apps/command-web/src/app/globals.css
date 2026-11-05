@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #0b1f33;
+  --ink: #1c2430;
+  --canvas: #f4f6f8;
+  --card: #ffffff;
+  --line: #d7dee6;
+  --muted: #5c6b7a;
+  --orange: #e36a1e;
+}
+
+[data-theme="dark"] {
+  --navy: #07131f;
+  --ink: #e8eef4;
+  --canvas: #0b1f33;
+  --card: #12283d;
+  --line: #27445d;
+  --muted: #a8b7c6;
+  --orange: #e36a1e;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: "Segoe UI", sans-serif;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
