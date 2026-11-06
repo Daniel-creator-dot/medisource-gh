@@ -59,7 +59,22 @@ body {
 
 .rail nav {
   display: grid;
+  gap: 0.85rem;
+  overflow: auto;
+}
+
+.rail nav > div {
+  display: grid;
   gap: 0.15rem;
+}
+
+.nav-label {
+  margin: 0 0.75rem 0.2rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .rail nav a {
@@ -159,6 +174,7 @@ body {
 @media (max-width: 900px) {
   .app-shell { grid-template-columns: 1fr; }
   .rail { position: static; height: auto; }
+  .pulse { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 .hero-grid {
@@ -183,7 +199,40 @@ body {
   border-radius: 24px;
   background: var(--card-solid);
   box-shadow: var(--shadow);
-  padding: 1rem 1.15rem;
+  padding: 1.05rem 1.15rem 1.1rem;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.metric:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(36, 62, 110, 0.1);
+}
+
+.pulse {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.pulse a {
+  border-radius: 20px;
+  background: var(--card-solid);
+  box-shadow: var(--shadow);
+  padding: 0.85rem 1rem;
+}
+
+.pulse strong {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: var(--font-display), "Segoe UI", sans-serif;
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.cash-card {
+  background:
+    radial-gradient(420px 180px at 100% 0%, rgba(255, 255, 255, 0.24), transparent 55%),
+    linear-gradient(165deg, #3d7bff, #1d4ed8);
 }
 
 .metric::before {
@@ -324,5 +373,6 @@ select:focus-visible {
   *::after {
     animation: none !important;
     transition: none !important;
+    transform: none !important;
   }
 }

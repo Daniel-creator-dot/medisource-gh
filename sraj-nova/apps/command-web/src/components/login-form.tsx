@@ -74,7 +74,7 @@ export function LoginForm() {
         <input id="password" type="password" defaultValue="Demo-Only-Change-Me-1" className="mt-1 w-full rounded-xl border border-[var(--line)] bg-[var(--canvas)] px-3 py-2" {...form.register("password")} />
       </label>
       {login.error ? <p className="text-sm text-red-700">{login.error.message}</p> : null}
-      <button type="submit" disabled={login.isPending} className="w-full rounded-full bg-[var(--orange)] px-4 py-2.5 font-semibold text-white disabled:opacity-60">
+      <button type="submit" disabled={login.isPending} className="w-full rounded-full bg-[var(--blue)] px-4 py-2.5 font-semibold text-white disabled:opacity-60">
         {login.isPending ? "Signing in…" : "Sign in"}
       </button>
     </form>

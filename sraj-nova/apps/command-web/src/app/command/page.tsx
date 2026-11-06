@@ -58,18 +58,33 @@ type FloorSlice = {
 
 function WeekChart({ days }: { days: Center["board"]["attendance_week"] }) {
   const width = 640;
-  const height = 220;
+  const height = 248;
+  const padL = 28;
+  const padR = 12;
+  const padT = 16;
+  const padB = 32;
   const max = Math.max(...days.map((day) => Math.max(day.scheduled, day.unfilled)), 1);
-  const x = (index: number) => 24 + (index * (width - 48)) / Math.max(days.length - 1, 1);
-  const y = (value: number) => 16 + (1 - value / max) * (height - 48);
-  const path = (pick: (day: Center["board"]["attendance_week"][number]) => number) =>
-    days.map((day, index) => `${index === 0 ? "M" : "L"} ${x(index)} ${y(pick(day))}`).join(" ");
+  const x = (index: number) => padL + (index * (width - padL - padR)) / Math.max(days.length - 1, 1);
+  const y = (value: number) => padT + (1 - value / max) * (height - padT - padB);
+  const line = (pick: (day: Center["board"]["attendance_week"][number]) => number) =>
+    days.map((day, index) => `${index === 0 ? "M" : "L"} ${x(index).toFixed(1)} ${y(pick(day)).toFixed(1)}`).join(" ");
+  const area = `${line((day) => day.scheduled)} L ${x(days.length - 1).toFixed(1)} ${height - padB} L ${x(0).toFixed(1)} ${height - padB} Z`;
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="mt-4 w-full" role="img" aria-label="Filled and open posts for each day this week">
-      <path d={path((day) => day.scheduled)} fill="none" stroke="#2f6bff" strokeWidth="3" />
-      <path d={path((day) => day.unfilled)} fill="none" stroke="#d89a12" strokeWidth="3" />
+    <svg viewBox={`0 0 ${width} ${height}`} className="mt-3 w-full" role="img" aria-label="Filled and open posts for each day this week">
+      {[0, Math.ceil(max / 2), max].map((tick) => (
+        <g key={tick}>
+          <line x1={padL} x2={width - padR} y1={y(tick)} y2={y(tick)} stroke="#e6ebf4" />
+          <text x="0" y={y(tick) + 4} fontSize="11" fill="#7b8798">{tick}</text>
+        </g>
+      ))}
+      <path d={area} fill="rgba(47, 107, 255, 0.12)" />
+      <path d={line((day) => day.scheduled)} fill="none" stroke="#2f6bff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={line((day) => day.unfilled)} fill="none" stroke="#d89a12" strokeWidth="3" strokeDasharray="6 5" strokeLinecap="round" strokeLinejoin="round" />
       {days.map((day, index) => (
-        <text key={day.date} x={x(index)} y={height - 6} textAnchor="middle" fontSize="12" fill="#7b8798">{day.date.slice(5)}</text>
+        <g key={day.date}>
+          <circle cx={x(index)} cy={y(day.scheduled)} r={day.is_today ? 5 : 3.5} fill="#2f6bff" />
+          <text x={x(index)} y={height - 8} textAnchor="middle" fontSize="12" fill={day.is_today ? "#2f6bff" : "#7b8798"} fontWeight={day.is_today ? 700 : 500}>{day.date.slice(5)}</text>
+        </g>
       ))}
     </svg>
   );
@@ -111,13 +126,13 @@ export default async function CommandPage() {
   const focus = shifts.some((shift) => shift.is_today) ? floor?.as_of : shifts.at(-1)?.work_date;
   const lanes = [...new Set(shifts.filter((shift) => shift.work_date === focus).map((shift) => `${shift.site_name} · ${shift.position} · ${shift.worker_name ?? "Unfilled"}`))];
   const peak = Math.max(...data.workers_by_client.map((item) => item.workers), 1);
-  const weekMax = Math.max(...data.board.attendance_week.map((day) => day.scheduled + day.unfilled), 1);
   const wagePeak = Math.max(...data.board.invoice_weeks.map((week) => Number(week.employment_cost) + Number(week.agency_fee)), 1);
-  const counts = [
-    { label: "Total active employees", value: String(data.active_workforce), href: "/employees" },
-    { label: "Currently deployed", value: String(data.deployed_workers), href: "/employees" },
-    { label: "Scheduled today", value: String(data.scheduled_today), href: "/floor" },
-    { label: "Verified on duty", value: String(data.on_duty), href: "/floor" },
+  const pulse = [
+    { label: "On duty", value: String(data.on_duty), href: "/floor" },
+    { label: "Late", value: String(data.late), href: "/floor" },
+    { label: "Absent", value: String(data.absent), href: "/floor" },
+    { label: "Open posts", value: String(data.unfilled_shifts), href: "/deployment" },
+    { label: "Requests", value: String(data.pending_staffing_requests), href: "/work" },
   ];
   const money = [
     { label: "Weekly gross wages", value: `GHS ${data.finance.weekly_gross_payroll}`, href: "/finance", missing: false },
@@ -130,11 +145,27 @@ export default async function CommandPage() {
 
   return (
     <Shell>
+      <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold tracking-[0.14em] text-[var(--muted)]">TODAY ON THE FLOOR</p>
+          <h1 className="display text-4xl font-bold">{data.as_of}</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">{data.active_workforce} active · {data.deployed_workers} deployed · {data.scheduled_today} scheduled today</p>
+        </div>
+        <Link href="/work" className="rounded-full bg-[var(--blue)] px-4 py-2 text-sm font-semibold text-white">Do the work</Link>
+      </header>
+      <section className="pulse mb-4">
+        {pulse.map((item) => (
+          <Link key={item.label} href={item.href}>
+            <p className="text-sm text-[var(--muted)]">{item.label}</p>
+            <strong>{item.value}</strong>
+          </Link>
+        ))}
+      </section>
       <div className="dash">
         <div className="space-y-4">
           <section className="grid gap-3 sm:grid-cols-3">
             {money.filter((item) => !item.missing).slice(0, 3).map((item) => (
-              <Link key={item.label} href={item.href} className={item.missing ? "metric alert" : "metric"}>
+              <Link key={item.label} href={item.href} className="metric">
                 <p className="text-sm text-[var(--muted)]">{item.label}</p>
                 <strong>{item.value}</strong>
               </Link>
@@ -144,24 +175,16 @@ export default async function CommandPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold">Workforce this week</h2>
-                <p className="text-sm text-[var(--muted)]">Filled posts and open posts from stored shifts. {data.as_of}.</p>
+                <p className="text-sm text-[var(--muted)]">Filled posts and open posts from stored shifts. A future day is not marked absent.</p>
               </div>
               <Link className="rounded-full bg-[#eef3ff] px-3 py-1 text-sm font-semibold text-[var(--blue)]" href="/floor">Floor</Link>
             </div>
             <WeekChart days={data.board.attendance_week} />
-            <p className="mt-2 flex gap-4 text-sm text-[var(--muted)]"><span className="text-[var(--blue)]">Filled</span><span className="text-[#d89a12]">Open</span></p>
+            <p className="mt-1 flex gap-4 text-sm text-[var(--muted)]"><span className="text-[var(--blue)]">Filled</span><span className="text-[#d89a12]">Open</span></p>
           </article>
-          <section className="grid gap-3 sm:grid-cols-3">
-            {counts.map((item) => (
-              <Link key={item.label} href={item.href} className="metric">
-                <p className="text-sm text-[var(--muted)]">{item.label}</p>
-                <strong>{item.value}</strong>
-              </Link>
-            ))}
-          </section>
         </div>
         <aside className="space-y-4">
-          <article className="rounded-3xl bg-[var(--blue)] p-5 text-white shadow-[var(--shadow)]">
+          <article className="cash-card rounded-3xl p-5 text-white shadow-[var(--shadow)]">
             <p className="text-sm text-white/80">Recorded cash</p>
             <p className="display mt-2 text-4xl font-bold">{data.finance.cash_available ? `GHS ${data.finance.cash_available}` : "Not in this sign-in"}</p>
             <p className="mt-3 text-sm text-white/80">Book balance only. No bank or mobile-money payment has been made.</p>
@@ -189,7 +212,7 @@ export default async function CommandPage() {
 
       <section className="mt-6 grid gap-4 lg:grid-cols-2">
         <article className="panel p-4">
-          <h2 className="display text-2xl font-bold">Deployment by client</h2>
+          <h2 className="text-lg font-semibold">Deployment by client</h2>
           <p className="text-sm text-[var(--muted)]">Current deployments. This is not a forecast.</p>
           <ul className="mt-4 space-y-3 text-sm">
             {data.workers_by_client.length === 0 ? <li>No current deployments in this sign-in.</li> : data.workers_by_client.map((row) => (
@@ -204,21 +227,17 @@ export default async function CommandPage() {
           </ul>
         </article>
         <article className="panel p-4">
-          <h2 className="display text-2xl font-bold">This week&apos;s attendance</h2>
-          <p className="text-sm text-[var(--muted)]">Each column is a stored shift day. A future day stays scheduled and is not marked absent.</p>
-          <div className="mt-4 grid grid-cols-7 gap-2">
-            {data.board.attendance_week.map((day) => (
-              <div key={day.date} className="text-center text-xs">
-                <div className="mx-auto flex h-28 w-full items-end justify-center rounded-xl bg-[var(--canvas)]">
-                  <i className="block w-2/3 rounded-t-lg bg-[var(--blue)]" style={{ height: `${((day.scheduled + day.unfilled) / weekMax) * 100}%` }} />
-                </div>
-                <p className="mt-1 font-semibold">{day.date.slice(5)}</p>
-                <p className="text-[var(--muted)]">{day.future ? `${day.scheduled} scheduled` : `${day.on_duty ?? 0} on duty`}</p>
-                <p className="text-[var(--muted)]">{day.future ? "" : `${day.late ?? 0} late · ${day.absent ?? 0} absent`}</p>
-                <p className="text-[var(--muted)]">{day.unfilled} open</p>
-              </div>
+          <h2 className="text-lg font-semibold">Stored invoice weeks</h2>
+          <p className="text-sm text-[var(--muted)]">Wages and agency fee from issued invoices. Weeks with no invoice are omitted.</p>
+          <ul className="mt-4 space-y-3 text-sm">
+            {data.board.invoice_weeks.length === 0 ? <li>No invoice has been stored.</li> : data.board.invoice_weeks.map((week) => (
+              <li key={week.week_start}>
+                <div className="mb-1 flex justify-between"><Link href="/finance">Week {week.week_start}</Link><span>GHS {week.outstanding} outstanding</span></div>
+                <div className="bar" aria-hidden="true"><i style={{ width: `${(Number(week.employment_cost) / wagePeak) * 100}%` }} /></div>
+                <p className="mt-1 text-[var(--muted)]">Wages GHS {week.employment_cost} · fee GHS {week.agency_fee}</p>
+              </li>
             ))}
-          </div>
+          </ul>
         </article>
       </section>
 
@@ -226,7 +245,7 @@ export default async function CommandPage() {
         <section className="panel mt-6 p-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="display text-3xl font-bold">Shift timeline</h2>
+              <h2 className="text-lg font-semibold">Shift timeline</h2>
               <p className="text-sm text-[var(--muted)]">{focus === data.as_of ? "Today" : "Latest stored day this week"} · 05:00 to 23:00</p>
             </div>
             <Link className="text-sm font-semibold text-[var(--blue)]" href="/floor">Open the floor</Link>
@@ -252,35 +271,8 @@ export default async function CommandPage() {
         </section>
       ) : null}
 
-      <section className="mt-6 grid gap-4 lg:grid-cols-2">
-        <article className="panel p-4">
-          <h2 className="display text-2xl font-bold">Stored invoice weeks</h2>
-          <p className="text-sm text-[var(--muted)]">Wages and agency fee from issued invoices. Weeks with no invoice are omitted.</p>
-          <ul className="mt-4 space-y-3 text-sm">
-            {data.board.invoice_weeks.length === 0 ? <li>No invoice has been stored.</li> : data.board.invoice_weeks.map((week) => (
-              <li key={week.week_start}>
-                <div className="mb-1 flex justify-between"><Link href="/finance">Week {week.week_start}</Link><span>GHS {week.outstanding} outstanding</span></div>
-                <div className="bar" aria-hidden="true"><i style={{ width: `${(Number(week.employment_cost) / wagePeak) * 100}%` }} /></div>
-                <p className="mt-1 text-[var(--muted)]">Wages GHS {week.employment_cost} · fee GHS {week.agency_fee}</p>
-              </li>
-            ))}
-          </ul>
-        </article>
-        <article className="panel p-4">
-          <h2 className="display text-2xl font-bold">Fee and wages by client</h2>
-          <p className="text-sm text-[var(--muted)]">{data.board.net_profitability_reason}</p>
-          <ul className="mt-4 space-y-2 text-sm">
-            {data.board.clients_this_week.length === 0 ? <li>No client invoice for this week.</li> : data.board.clients_this_week.map((row) => (
-              <li key={row.client_name} className="rounded-xl bg-[var(--canvas)] px-3 py-2">
-                <p className="font-semibold">{row.client_name}</p>
-                <p>Wages GHS {row.employment_cost} · fee GHS {row.agency_fee} · outstanding GHS {row.outstanding}</p>
-              </li>
-            ))}
-          </ul>
-        </article>
-      </section>
       <section className="panel mt-6 overflow-x-auto p-4">
-        <h2 className="display text-2xl font-bold">Staffing this week</h2>
+        <h2 className="text-lg font-semibold">Staffing this week</h2>
         <p className="text-sm text-[var(--muted)]">Filled and open posts by factory. An empty cell has no stored shift.</p>
         {data.board.heatmap.length === 0 ? <p className="mt-3 text-sm">No shifts are stored this week.</p> : (
           <div className="mt-4 min-w-[640px] space-y-2 text-xs">
@@ -302,7 +294,7 @@ export default async function CommandPage() {
       </section>
       <section className="mt-6 grid gap-4 lg:grid-cols-3">
         <article className="panel p-4">
-          <h2 className="display text-2xl font-bold">Exceptions</h2>
+          <h2 className="text-lg font-semibold">Still open</h2>
           <ul className="mt-3 space-y-2 text-sm">
             <li className="rounded-xl bg-[var(--canvas)] px-3 py-2"><Link href="/floor">{data.late} late · {data.absent} absent today</Link></li>
             <li className="rounded-xl bg-[var(--canvas)] px-3 py-2"><Link href="/deployment">{data.unfilled_shifts} unfilled posts</Link></li>
@@ -311,7 +303,7 @@ export default async function CommandPage() {
           </ul>
         </article>
         <article className="panel p-4">
-          <h2 className="display text-2xl font-bold">Recent activity</h2>
+          <h2 className="text-lg font-semibold">Recent activity</h2>
           <ul className="mt-3 space-y-2 text-sm">
             {data.board.activity.length === 0 ? <li className="text-[var(--muted)]">No attendance, request, journal, or receipt is stored.</li> : data.board.activity.map((item) => (
               <li key={`${item.at}-${item.text}`} className="rounded-xl bg-[var(--canvas)] px-3 py-2"><Link href={item.href}>{item.text}</Link></li>
@@ -319,7 +311,7 @@ export default async function CommandPage() {
           </ul>
         </article>
         <article className="panel p-4">
-          <h2 className="display text-2xl font-bold">Open alerts</h2>
+          <h2 className="text-lg font-semibold">Open alerts</h2>
           <ul className="mt-3 space-y-2 text-sm">
             {data.open_alerts.length === 0 ? <li className="text-[var(--muted)]">No open operational alerts.</li> : data.open_alerts.map((alert) => (
               <li key={alert.message} className="rounded-xl bg-[var(--canvas)] px-3 py-2">{alert.message}</li>
@@ -327,7 +319,7 @@ export default async function CommandPage() {
           </ul>
         </article>
         <article className="panel p-4">
-          <h2 className="display text-2xl font-bold">Certifications and statutory</h2>
+          <h2 className="text-lg font-semibold">Certifications and statutory</h2>
           <ul className="mt-3 space-y-2 text-sm">
             {(floor?.certifications ?? []).length === 0 ? <li className="text-[var(--muted)]">No certification expires within 60 days.</li> : floor?.certifications.map((item) => (
               <li key={`${item.employee_id}-${item.name}`} className="rounded-xl bg-[var(--canvas)] px-3 py-2">

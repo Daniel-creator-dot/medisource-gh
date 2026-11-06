@@ -10,7 +10,7 @@ export function ThemeToggle() {
 
   return (
     <button type="button" onClick={toggle} className="w-full rounded-2xl bg-[var(--canvas)] px-3 py-2 text-left text-sm font-semibold text-[var(--ink)]">
-      Theme
+      Light / dark
     </button>
   );
 }
