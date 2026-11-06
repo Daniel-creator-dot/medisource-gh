@@ -19,6 +19,8 @@ const display = Barlow_Condensed({
   preload: false,
 });
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "SRAJ NOVA Workforce ERP",
   description: "Agency command center for workforce outsourcing.",

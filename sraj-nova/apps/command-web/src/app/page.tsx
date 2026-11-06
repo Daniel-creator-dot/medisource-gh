@@ -17,7 +17,7 @@ export default function LoginPage() {
       </section>
       <section className="flex items-start overflow-auto px-6 py-12 lg:items-center">
         <div className="mx-auto w-full max-w-md">
-          <p className="text-sm font-semibold tracking-[0.16em] text-[var(--orange)]">AGENCY ACCESS</p>
+          <p className="text-sm font-semibold tracking-[0.16em] text-[var(--orange)]">LIVE WORKSPACE</p>
           <h1 className="display mt-2 text-4xl font-bold">Sign in</h1>
           <div className="panel mt-6 p-5">
             <LoginForm />

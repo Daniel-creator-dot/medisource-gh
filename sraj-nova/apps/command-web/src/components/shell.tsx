@@ -20,7 +20,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <div className="stage">
         <div className="topbar">
           <WorkspaceSearch />
-          <p className="hidden text-sm text-[var(--muted)] lg:block">Sample factories. Amounts come from stored records.</p>
+          <p className="hidden text-sm text-[var(--muted)] lg:block">Live workspace. Amounts come from stored records.</p>
         </div>
         <main>{children}</main>
       </div>
