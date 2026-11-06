@@ -20,10 +20,11 @@ services:
         generateValue: true
       - key: DJANGO_DEBUG
         value: "false"
+      # Supabase session pooler for project healynks. The password stays in the
+      # Render dashboard so a blueprint sync cannot put it in git or switch
+      # this service back to the marketplace database.
       - key: DATABASE_URL
-        fromDatabase:
-          name: medisource-gh-db
-          property: connectionString
+        sync: false
       - key: WEB_ORIGIN
         value: https://medisource-gh-web.onrender.com
       - key: CORS_ALLOWED_ORIGINS
