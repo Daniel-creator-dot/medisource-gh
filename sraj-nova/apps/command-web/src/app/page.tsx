@@ -8,7 +8,7 @@ export default function LoginPage() {
         <div className="hero-grid absolute inset-0" />
         <div className="relative">
           <Mark light />
-          <p className="display mt-10 max-w-xl text-5xl font-bold leading-none sm:text-6xl">Workforce command for every client site.</p>
+          <p className="display mt-10 max-w-xl text-5xl font-bold leading-none sm:text-6xl">The factory floor, the wages, and the client invoice in one board.</p>
           <p className="mt-4 max-w-md text-white/75">
             SRAJ NOVA recruits, deploys, and pays workers assigned to external factories. This sign-in uses demonstration accounts.
           </p>

@@ -8,6 +8,18 @@ class _CsrfReason(CsrfViewMiddleware):
         return reason
 
 
+class ApiSafeCsrfMiddleware(CsrfViewMiddleware):
+    """API failures stay JSON. The HTML CSRF page cannot be parsed by the browser."""
+
+    def _reject(self, request, reason):
+        if request.path.startswith("/api/"):
+            return JsonResponse(
+                {"error": {"code": "csrf_failed", "message": "CSRF verification failed.", "details": None}},
+                status=403,
+            )
+        return super()._reject(request, reason)
+
+
 class EnsureApiSlashMiddleware(MiddlewareMixin):
     """Keep slash-sensitive API routes reachable through the web proxy."""
 

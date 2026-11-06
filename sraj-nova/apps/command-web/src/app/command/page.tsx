@@ -57,8 +57,14 @@ export default async function CommandPage() {
       <p className="mt-2 max-w-3xl text-sm text-[var(--muted)]">
         Counts for {data.as_of}, scope {data.scope}. Late means a recorded arrival more than 10 minutes after the scheduled start. That grace period is an operational setting.
       </p>
-      <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {metrics.map((metric) => (
+      <section className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <article className="gauge"><span>On duty</span><strong>{data.on_duty}</strong></article>
+        <article className="gauge hot"><span>Late</span><strong>{data.late}</strong></article>
+        <article className="gauge"><span>Absent</span><strong>{data.absent}</strong></article>
+        <article className="gauge hot"><span>Unfilled posts</span><strong>{data.unfilled_shifts}</strong></article>
+      </section>
+      <section className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {metrics.filter((metric) => !["On duty", "Late", "Absent", "Unfilled shifts"].includes(metric.label)).map((metric) => (
           <article key={metric.label} className={metric.tone === "alert" ? "metric alert" : "metric"}>
             <p className="text-sm text-[var(--muted)]">{metric.label}</p>
             <strong>{metric.value(data)}</strong>
@@ -68,13 +74,19 @@ export default async function CommandPage() {
       <section className="mt-6 grid gap-4 lg:grid-cols-2">
         <article className="panel p-4">
           <h2 className="display text-xl font-bold">Workers by client</h2>
-          <ul className="mt-3 space-y-2 text-sm">
-            {data.workers_by_client.map((row) => (
-              <li key={row.client_id} className="flex items-center justify-between border-b border-[var(--line)] py-2">
-                <span>{row.client_name}</span>
-                <span className="display text-2xl font-bold">{row.workers}</span>
-              </li>
-            ))}
+          <ul className="mt-3 space-y-3 text-sm">
+            {data.workers_by_client.map((row) => {
+              const peak = Math.max(...data.workers_by_client.map((item) => item.workers), 1);
+              return (
+                <li key={row.client_id}>
+                  <div className="mb-1 flex items-center justify-between">
+                    <span>{row.client_name}</span>
+                    <span className="display text-2xl font-bold">{row.workers}</span>
+                  </div>
+                  <div className="bar" aria-hidden="true"><i style={{ width: `${(row.workers / peak) * 100}%` }} /></div>
+                </li>
+              );
+            })}
           </ul>
         </article>
         <article className="panel p-4">

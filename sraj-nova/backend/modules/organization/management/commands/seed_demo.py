@@ -8,6 +8,7 @@ from django.utils import timezone
 from decimal import Decimal
 
 from common.crypto import encrypt
+from modules.finance.ledger import post_opening_cash
 from modules.finance.models import CashMovement
 from modules.finance.services import rebuild_week_invoices
 from modules.identity.models import AgencyRole, User
@@ -186,6 +187,7 @@ class Command(BaseCommand):
             description="Sample opening cash balance",
             defaults={"occurred_on": today, "amount": Decimal("2500.00"), "is_demo": True},
         )
+        post_opening_cash(Decimal("2500.00"), today)
 
     def _client(self, slug, name, sector):
         return Client.objects.update_or_create(

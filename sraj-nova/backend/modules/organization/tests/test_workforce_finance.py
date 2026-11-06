@@ -79,3 +79,25 @@ def test_client_finance_excludes_agency_cash(api):
     assert "cash_available" not in data
     assert data["statutory_liabilities"] is None
     assert api.post("/api/v1/finance/worksheets/rebuild/", {}, format="json").status_code == 403
+
+
+@pytest.mark.django_db
+def test_factory_floor_scopes_sites_and_keeps_rates_with_the_agency(api):
+    call_command("seed_demo")
+    auth(api, User.objects.get(email="worker.ama@sample.sraj.test"))
+    assert api.get("/api/v1/factory-floor/").status_code == 403
+    auth(api, User.objects.get(email="client.ashanti@sample.sraj.test"))
+    floor = api.get("/api/v1/factory-floor/").json()["data"]
+    assert floor["shifts"]
+    assert {row["client_name"] for row in floor["shifts"]} == {"Sample Ashanti Textile Works"}
+    assert "hourly_rate" not in floor["shifts"][0]
+    finance = api.get("/api/v1/finance/").json()["data"]
+    assert finance["sites"]
+    assert all(row["client_name"] == "Sample Ashanti Textile Works" for row in finance["sites"])
+    auth(api, User.objects.get(email="nova.owner@sample.sraj.test"))
+    agency = api.get("/api/v1/factory-floor/").json()["data"]
+    priced = next(row for row in agency["shifts"] if row["worker_number"] == "SN-1001")
+    assert priced["hourly_rate"] == "20.00"
+    assert priced["attendance"] in {"on_duty", "present", "late", "absent"}
+    sites = api.get("/api/v1/finance/").json()["data"]["sites"]
+    assert sum(1 for row in sites if row["labor_cost"] != "0.00") >= 1

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { readJson } from "@/lib/read-json";
+
 export function RebuildWorksheet() {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
@@ -11,7 +13,8 @@ export function RebuildWorksheet() {
   async function rebuild() {
     setPending(true);
     const csrf = await fetch("/api/v1/auth/csrf/", { credentials: "include", cache: "reload" });
-    const token = ((await csrf.json()) as { data: { csrf_token: string } }).data.csrf_token;
+    const csrfBody = await readJson<{ data?: { csrf_token?: string } }>(csrf);
+    const token = csrfBody?.data?.csrf_token ?? "";
     const response = await fetch("/api/v1/finance/worksheets/rebuild/", {
       method: "POST",
       credentials: "include",

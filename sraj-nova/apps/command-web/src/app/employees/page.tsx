@@ -21,31 +21,15 @@ export default async function EmployeesPage() {
       <h1 className="display mt-1 text-4xl font-bold">Workforce</h1>
       <p className="mt-1 text-sm text-[var(--muted)]">Open a person for the 360° record. Pay and restricted notes stay with the agency and the worker.</p>
       {result.status === 403 ? <p className="mt-3">{result.message}</p> : null}
-      <div className="sheet mt-4">
-        <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-[var(--line)] text-[var(--muted)]">
-            <tr>
-              <th className="px-3 py-2 font-medium">Number</th>
-              <th className="px-3 py-2 font-medium">Name</th>
-              <th className="px-3 py-2 font-medium">Status</th>
-              <th className="px-3 py-2 font-medium">Current deployment</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(result.data ?? []).map((person) => (
-              <tr key={person.id} className="border-b border-[var(--line)]">
-                <td className="px-3 py-2">
-                  <Link className="font-medium underline" href={`/employees/${person.id}`}>
-                    {person.agency_employee_number}
-                  </Link>
-                </td>
-                <td className="px-3 py-2">{person.first_name} {person.last_name}</td>
-                <td className="px-3 py-2">{person.status}</td>
-                <td className="px-3 py-2">{person.deployment ? `${person.deployment.position}, ${person.deployment.client_name}` : "None"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        {(result.data ?? []).map((person) => (
+          <Link key={person.id} href={`/employees/${person.id}`} className="panel block p-4">
+            <p className="text-xs font-semibold tracking-[0.14em] text-[var(--orange)]">{person.agency_employee_number}</p>
+            <h2 className="display mt-1 text-3xl font-bold">{person.first_name} {person.last_name}</h2>
+            <p className="mt-2 text-sm capitalize text-[var(--muted)]">{person.status}{person.is_demo ? " · sample record" : ""}</p>
+            <p className="mt-3 text-sm">{person.deployment ? `${person.deployment.position} · ${person.deployment.client_name}` : "No current factory deployment"}</p>
+          </Link>
+        ))}
       </div>
     </Shell>
   );

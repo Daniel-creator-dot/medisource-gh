@@ -1,6 +1,7 @@
 import { RebuildWorksheet } from "@/components/rebuild-worksheet";
 import { Shell } from "@/components/shell";
 import { apiGet } from "@/lib/api";
+import Link from "next/link";
 
 type Finance = {
   week_start: string;
@@ -14,7 +15,8 @@ type Finance = {
   cash_available?: string;
   cash_after_payroll?: string;
   cash_note?: string;
-  invoices: { client_name: string; employment_cost: string; agency_fee: string; total: string; status: string; is_demo: boolean }[];
+  invoices: { client_name: string; employment_cost: string; agency_fee: string; total: string; outstanding: string; status: string; is_demo: boolean }[];
+  sites?: { client_name: string; site_name: string; city: string; hours: string; labor_cost: string; filled_shifts: number }[];
 };
 
 type Me = { role: string };
@@ -49,6 +51,7 @@ export default async function FinancePage() {
                   <th className="px-3 py-2 font-medium">Employment cost</th>
                   <th className="px-3 py-2 font-medium">Agency fee</th>
                   <th className="px-3 py-2 font-medium">Invoice total</th>
+                  <th className="px-3 py-2 font-medium">Still outstanding</th>
                 </tr>
               </thead>
               <tbody>
@@ -58,11 +61,31 @@ export default async function FinancePage() {
                     <td className="px-3 py-2">{invoice.employment_cost}</td>
                     <td className="px-3 py-2">{invoice.agency_fee}</td>
                     <td className="px-3 py-2">{invoice.total}</td>
+                    <td className="px-3 py-2">{invoice.outstanding}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <section className="panel mt-4 p-4">
+            <h2 className="display text-2xl font-bold">Labor cost by factory site</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">Scheduled hours this week times each worker&apos;s stored hourly rate. This is the employment cost behind the client invoice, split by site.</p>
+            <div className="mt-4 space-y-3">
+              {(data.sites ?? []).map((site) => {
+                const peak = Math.max(...(data.sites ?? []).map((item) => Number(item.labor_cost)), 1);
+                return (
+                  <article key={`${site.client_name}-${site.site_name}`}>
+                    <div className="flex flex-wrap items-end justify-between gap-2 text-sm">
+                      <p><span className="font-semibold">{site.site_name}</span> · {site.city}<br /><span className="text-[var(--muted)]">{site.client_name} · {site.filled_shifts} filled shifts · {site.hours} h</span></p>
+                      <p className="display text-3xl font-bold">{data.currency} {site.labor_cost}</p>
+                    </div>
+                    <div className="bar mt-2" aria-hidden="true"><i style={{ width: `${(Number(site.labor_cost) / peak) * 100}%` }} /></div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+          {agency ? <p className="mt-4 text-sm"><Link className="font-semibold underline" href="/accounting">Open the books</Link></p> : null}
           {agency ? <RebuildWorksheet /> : null}
         </>
       )}

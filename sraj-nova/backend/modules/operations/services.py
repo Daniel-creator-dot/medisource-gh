@@ -80,6 +80,102 @@ def command_center(user) -> dict:
     }
 
 
+def factory_floor(user) -> dict:
+    """Today's factory shifts, skill cover, leave, and certification dates from stored records."""
+    from modules.finance.services import money_str, shift_hours
+    from modules.workforce.models import Certification, LeaveRequest, PayProfile, Qualification
+
+    clients = scoped_clients(user)
+    employees = scoped_employees(user)
+    today = timezone.localdate()
+    start = today - timedelta(days=today.weekday())
+    end = start + timedelta(days=6)
+    agency = user.role in AGENCY_ROLES
+    shifts = (
+        ShiftAssignment.objects.filter(work_date__gte=start, work_date__lte=end, client__in=clients)
+        .select_related("client", "site", "department", "position", "employee")
+        .order_by("work_date", "site__name", "starts_at")
+    )
+    qualified = set(Qualification.objects.filter(employee__in=employees).values_list("employee_id", "skill"))
+    rows = []
+    for shift in shifts:
+        skill = shift.position.required_skill
+        if shift.employee_id is None:
+            cover = "open" if skill else "not_required"
+            attendance = "unfilled"
+        elif shift.work_date > today:
+            if not skill:
+                cover = "not_required"
+            elif (shift.employee_id, skill) in qualified:
+                cover = "covered"
+            else:
+                cover = "gap"
+            attendance = "scheduled"
+        elif not skill:
+            cover = "not_required"
+            attendance = _attendance_state(shift.employee_id, today if shift.work_date == today else shift.work_date, shift.starts_at)
+        elif (shift.employee_id, skill) in qualified:
+            cover = "covered"
+            attendance = _attendance_state(shift.employee_id, shift.work_date, shift.starts_at)
+        else:
+            cover = "gap"
+            attendance = _attendance_state(shift.employee_id, shift.work_date, shift.starts_at)
+        row = {
+            "id": str(shift.id),
+            "work_date": shift.work_date.isoformat(),
+            "is_today": shift.work_date == today,
+            "client_name": shift.client.legal_name,
+            "site_name": shift.site.name,
+            "city": shift.site.city,
+            "department": shift.department.name,
+            "position": shift.position.title,
+            "required_skill": skill,
+            "skill_cover": cover,
+            "starts_at": shift.starts_at.strftime("%H:%M"),
+            "ends_at": shift.ends_at.strftime("%H:%M"),
+            "hours": money_str(shift_hours(shift)),
+            "attendance": attendance,
+            "employee_id": str(shift.employee_id) if shift.employee_id else None,
+            "worker_number": shift.employee.agency_employee_number if shift.employee_id else None,
+            "worker_name": f"{shift.employee.first_name} {shift.employee.last_name}" if shift.employee_id else None,
+        }
+        if agency and shift.employee_id:
+            try:
+                rate = shift.employee.pay_profile.hourly_rate
+            except PayProfile.DoesNotExist:
+                rate = None
+            if rate is not None:
+                row["hourly_rate"] = money_str(rate)
+                row["labor_cost"] = money_str(shift_hours(shift) * rate)
+        rows.append(row)
+    horizon = today + timedelta(days=60)
+    certifications = [
+        {
+            "employee_id": str(item.employee_id),
+            "worker_name": f"{item.employee.first_name} {item.employee.last_name}",
+            "name": item.name,
+            "expires_on": item.expires_on.isoformat(),
+            "state": "expired" if item.expires_on < today else "due",
+        }
+        for item in Certification.objects.filter(employee__in=employees, expires_on__isnull=False, expires_on__lte=horizon)
+        .select_related("employee")
+        .order_by("expires_on")
+    ]
+    leave = [
+        {
+            "employee_id": str(item.employee_id),
+            "worker_name": f"{item.employee.first_name} {item.employee.last_name}",
+            "starts_on": item.starts_on.isoformat(),
+            "ends_on": item.ends_on.isoformat(),
+            "status": item.status,
+        }
+        for item in LeaveRequest.objects.filter(
+            employee__in=employees, status="approved", starts_on__lte=today, ends_on__gte=today
+        ).select_related("employee")
+    ]
+    return {"as_of": today.isoformat(), "week_start": start.isoformat(), "shifts": rows, "certifications": certifications, "leave": leave}
+
+
 def _finance_block(user) -> dict:
     from modules.finance.services import finance_summary
 

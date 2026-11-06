@@ -41,9 +41,10 @@ def week_start(day=None):
 
 
 def rebuild_week_invoices(day=None) -> None:
+    from modules.finance.ledger import invoice_has_open_journal
+
     start = week_start(day)
     end = start + timedelta(days=6)
-    ClientInvoice.objects.filter(week_start=start, is_demo=True).delete()
     costs: dict = {}
     shifts = ShiftAssignment.objects.filter(
         work_date__gte=start, work_date__lte=end, employee__isnull=False
@@ -57,6 +58,9 @@ def rebuild_week_invoices(day=None) -> None:
     for client_id, cost in costs.items():
         contract = ServiceContract.objects.filter(client_id=client_id).order_by("-ends_on").first()
         rate = contract.management_fee_rate if contract is not None else Decimal("0")
+        existing = ClientInvoice.objects.filter(client_id=client_id, week_start=start).first()
+        if existing is not None and invoice_has_open_journal(existing):
+            continue
         ClientInvoice.objects.update_or_create(
             client_id=client_id,
             week_start=start,
@@ -70,18 +74,58 @@ def rebuild_week_invoices(day=None) -> None:
         )
 
 
+def _site_labor(clients, start, end) -> list[dict]:
+    shifts = ShiftAssignment.objects.filter(
+        work_date__gte=start, work_date__lte=end, employee__isnull=False, client__in=clients
+    ).select_related("client", "site", "employee__pay_profile")
+    grouped: dict = {}
+    for shift in shifts:
+        bucket = grouped.setdefault(
+            shift.site_id,
+            {
+                "client_name": shift.client.legal_name,
+                "site_name": shift.site.name,
+                "city": shift.site.city,
+                "hours": Decimal("0.00"),
+                "labor_cost": Decimal("0.00"),
+                "filled_shifts": 0,
+            },
+        )
+        hours = shift_hours(shift)
+        bucket["hours"] += hours
+        bucket["filled_shifts"] += 1
+        try:
+            bucket["labor_cost"] += money(hours * shift.employee.pay_profile.hourly_rate)
+        except PayProfile.DoesNotExist:
+            continue
+    return [
+        {
+            "client_name": row["client_name"],
+            "site_name": row["site_name"],
+            "city": row["city"],
+            "hours": money_str(row["hours"]),
+            "labor_cost": money_str(row["labor_cost"]),
+            "filled_shifts": row["filled_shifts"],
+        }
+        for row in sorted(grouped.values(), key=lambda item: (item["client_name"], item["site_name"]))
+    ]
+
+
 def finance_summary(user) -> dict:
     clients = scoped_clients(user)
     start = week_start()
     invoices = list(ClientInvoice.objects.filter(week_start=start, client__in=clients).select_related("client"))
+    from modules.finance.ledger import cash_balance, invoice_outstanding
+
     employment = sum((invoice.employment_cost for invoice in invoices), Decimal("0.00"))
     fee = sum((invoice.agency_fee for invoice in invoices), Decimal("0.00"))
+    outstanding = sum((invoice_outstanding(invoice) for invoice in invoices), Decimal("0.00"))
     payload = {
         "week_start": start.isoformat(),
         "currency": "GHS",
         "weekly_gross_payroll": money_str(employment),
         "agency_fee": money_str(fee),
-        "outstanding_invoices": money_str(employment + fee),
+        "outstanding_invoices": money_str(outstanding),
         "estimated_net_payroll": None,
         "statutory_liabilities": None,
         "basis": BASIS,
@@ -91,14 +135,17 @@ def finance_summary(user) -> dict:
                 "employment_cost": money_str(invoice.employment_cost),
                 "agency_fee": money_str(invoice.agency_fee),
                 "total": money_str(invoice.employment_cost + invoice.agency_fee),
+                "outstanding": money_str(invoice_outstanding(invoice)),
                 "status": invoice.status,
                 "is_demo": invoice.is_demo,
             }
             for invoice in invoices
         ],
     }
+    payload["sites"] = _site_labor(clients, start, start + timedelta(days=6))
     if user.role in AGENCY_ROLES:
-        cash = CashMovement.objects.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+        ledger_cash = cash_balance()
+        cash = ledger_cash if ledger_cash is not None else (CashMovement.objects.aggregate(total=Sum("amount"))["total"] or Decimal("0.00"))
         payload["cash_available"] = money_str(cash)
         payload["cash_after_payroll"] = money_str(cash - employment)
         payload["cash_note"] = (

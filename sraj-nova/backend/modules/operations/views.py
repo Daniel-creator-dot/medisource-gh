@@ -6,7 +6,7 @@ from common.api import error_response, ok
 from modules.identity.models import AGENCY_ROLES, AgencyRole
 from modules.operations.coverage import assignment_block, coverage
 from modules.operations.models import AttendanceAdjustment, AttendanceEvent, ShiftAssignment
-from modules.operations.services import scoped_clients
+from modules.operations.services import factory_floor, scoped_clients
 from modules.workforce.models import Employee
 
 
@@ -37,6 +37,15 @@ class AttendanceAdjustmentView(APIView):
             },
             status=201,
         )
+
+
+class FactoryFloorView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role == AgencyRole.EMPLOYEE:
+            raise PermissionDenied()
+        return ok(factory_floor(request.user))
 
 
 class CoverageView(APIView):
