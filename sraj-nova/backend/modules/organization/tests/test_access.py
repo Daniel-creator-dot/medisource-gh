@@ -131,6 +131,13 @@ def test_agency_owner_without_authenticator_gets_no_session(api):
 
 
 @pytest.mark.django_db
+def test_schema_setup_skips_sqlite():
+    from boot_server import ensure_schema
+
+    ensure_schema()
+
+
+@pytest.mark.django_db
 def test_api_returns_json_when_the_client_asks_for_html(api):
     response = api.get("/api/v1/health/", HTTP_ACCEPT="text/html")
     assert response.status_code == 200

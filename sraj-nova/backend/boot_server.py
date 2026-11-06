@@ -7,7 +7,20 @@ import threading
 import time
 
 
+def ensure_schema() -> None:
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.production")
+    import django
+    from django.db import connection
+
+    django.setup()
+    if connection.vendor != "postgresql":
+        return
+    with connection.cursor() as cursor:
+        cursor.execute("CREATE SCHEMA IF NOT EXISTS nova")
+
+
 def prepare() -> None:
+    ensure_schema()
     for _ in range(12):
         migrated = subprocess.call([sys.executable, "manage.py", "migrate", "--noinput"])
         if migrated == 0:

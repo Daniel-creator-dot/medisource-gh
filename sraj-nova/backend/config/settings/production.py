@@ -14,6 +14,12 @@ render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
 if render_host and render_host not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(render_host)
 
+# The Render database already contains the earlier marketplace schema.
+# Keep this application's tables in their own schema.
+if "postgresql" in DATABASES["default"]["ENGINE"]:
+    database_options = DATABASES["default"].setdefault("OPTIONS", {})
+    database_options["options"] = "-c search_path=nova"
+
 SECURE_SSL_REDIRECT = True
 SECURE_REDIRECT_EXEMPT = [r"^api/v1/health/$"]
 SESSION_COOKIE_SECURE = True
