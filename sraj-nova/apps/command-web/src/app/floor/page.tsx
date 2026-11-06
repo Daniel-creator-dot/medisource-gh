@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ClockPunch } from "@/components/clock-punch";
 import { Shell } from "@/components/shell";
 import { apiGet } from "@/lib/api";
 
@@ -39,7 +40,10 @@ function width(hours: string) {
 }
 
 export default async function FloorPage() {
-  const result = await apiGet<Floor>("/factory-floor/");
+  const [result, me] = await Promise.all([
+    apiGet<Floor>("/factory-floor/"),
+    apiGet<{ role: string }>("/auth/me/"),
+  ]);
   const floor = result.data;
   if (result.status === 403 || !floor) {
     return (
@@ -49,6 +53,7 @@ export default async function FloorPage() {
       </Shell>
     );
   }
+  const canPunch = me.data?.role !== "client_user";
   const sites = [...new Set(floor.shifts.map((shift) => `${shift.client_name} · ${shift.site_name}`))];
   return (
     <Shell>
@@ -82,6 +87,7 @@ export default async function FloorPage() {
                     </p>
                     <p className="mt-1 text-sm text-[var(--muted)]">{shift.starts_at}–{shift.ends_at} · {shift.hours} h{shift.hourly_rate ? ` · GHS ${shift.hourly_rate}/h · GHS ${shift.labor_cost}` : ""}</p>
                     <div className="bar mt-3" aria-hidden="true"><i style={{ width: `${width(shift.hours)}%` }} /></div>
+                    {canPunch && shift.is_today && shift.employee_id ? <ClockPunch employeeId={shift.employee_id} /> : null}
                     <p className="mt-2 text-xs uppercase tracking-[0.08em] text-[var(--muted)]">
                       {shift.required_skill ? `${shift.required_skill} · ${shift.skill_cover.replace("_", " ")}` : "No skill requirement stored"}
                     </p>
