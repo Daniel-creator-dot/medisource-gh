@@ -46,7 +46,10 @@ class PostWeekView(APIView):
 
     def post(self, request):
         _agency(request.user)
-        count = post_week_invoices()
+        try:
+            count = post_week_invoices()
+        except BooksError as exc:
+            return error_response(exc.code, exc.message, 400)
         payload = books_snapshot()
         payload["posted_invoices"] = count
         return ok(payload)

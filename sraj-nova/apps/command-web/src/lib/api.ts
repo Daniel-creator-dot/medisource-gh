@@ -10,7 +10,7 @@ export async function apiGet<T>(path: string): Promise<ApiResult<T>> {
   let response: Response;
   try {
     response = await fetch(`${api}/api/v1${path}`, {
-      headers: { cookie: jar.toString() },
+      headers: { cookie: jar.toString(), accept: "application/json" },
       cache: "no-store",
       signal: AbortSignal.timeout(15000),
     });

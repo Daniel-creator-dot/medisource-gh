@@ -20,6 +20,15 @@ class ApiSafeCsrfMiddleware(CsrfViewMiddleware):
         return super()._reject(request, reason)
 
 
+class ApiAcceptJsonMiddleware(MiddlewareMixin):
+    """API routes always negotiate JSON, even when a browser asks for HTML."""
+
+    def process_request(self, request):
+        if request.path.startswith("/api/"):
+            request.META["HTTP_ACCEPT"] = "application/json"
+        return None
+
+
 class EnsureApiSlashMiddleware(MiddlewareMixin):
     """Keep slash-sensitive API routes reachable through the web proxy."""
 

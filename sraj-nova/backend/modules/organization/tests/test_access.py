@@ -131,6 +131,14 @@ def test_agency_owner_without_authenticator_gets_no_session(api):
 
 
 @pytest.mark.django_db
+def test_api_returns_json_when_the_client_asks_for_html(api):
+    response = api.get("/api/v1/health/", HTTP_ACCEPT="text/html")
+    assert response.status_code == 200
+    assert response["Content-Type"].startswith("application/json")
+    assert response.json()["data"]["checks"]["database"] == "ok"
+
+
+@pytest.mark.django_db
 def test_csrf_accepts_the_proxy_path_without_a_trailing_slash(api):
     response = api.get("/api/v1/auth/csrf")
     assert response.status_code == 200

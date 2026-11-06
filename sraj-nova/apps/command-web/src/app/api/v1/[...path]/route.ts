@@ -4,7 +4,7 @@ const api = process.env.API_URL || "http://127.0.0.1:8010";
 
 export const dynamic = "force-dynamic";
 
-const forwarded = ["cookie", "content-type", "x-csrftoken", "authorization", "origin", "accept"];
+const forwarded = ["cookie", "content-type", "x-csrftoken", "authorization", "origin"];
 
 function unavailable() {
   return NextResponse.json(
@@ -22,6 +22,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     const value = request.headers.get(name);
     if (value) headers.set(name, value);
   }
+  headers.set("accept", "application/json");
   try {
     const response = await fetch(target, {
       method: request.method,

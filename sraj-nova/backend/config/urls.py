@@ -17,3 +17,4 @@ urlpatterns = [
 ]
 
 admin.site.site_header = "SRAJ NOVA technical admin"
+handler404 = "common.exceptions.api_not_found"
