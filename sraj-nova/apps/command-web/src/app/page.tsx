@@ -4,7 +4,7 @@ import { Mark } from "@/components/mark";
 export default function LoginPage() {
   return (
     <main className="grid min-h-screen lg:grid-cols-[1.1fr_0.9fr]">
-      <section className="relative flex min-h-[42vh] flex-col justify-between overflow-hidden bg-[#0b1f33] px-6 py-8 text-white sm:px-10">
+      <section className="relative flex min-h-[42vh] flex-col justify-between overflow-hidden bg-[#16130f] px-6 py-8 text-white sm:px-10">
         <div className="hero-grid absolute inset-0" />
         <div className="relative">
           <Mark light />
@@ -15,7 +15,7 @@ export default function LoginPage() {
         </div>
         <p className="relative mt-10 text-sm text-white/55">GHS · Africa/Accra · Sample data</p>
       </section>
-      <section className="flex items-center px-6 py-12">
+      <section className="flex items-start overflow-auto px-6 py-12 lg:items-center">
         <div className="mx-auto w-full max-w-md">
           <p className="text-sm font-semibold tracking-[0.16em] text-[var(--orange)]">AGENCY ACCESS</p>
           <h1 className="display mt-2 text-4xl font-bold">Sign in</h1>

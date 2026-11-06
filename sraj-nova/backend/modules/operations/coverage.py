@@ -40,10 +40,12 @@ def assignment_block(employee, shift) -> str | None:
 
 def coverage(day=None) -> list[dict]:
     day = day or timezone.localdate()
+    start = day - timedelta(days=day.weekday())
+    end = start + timedelta(days=6)
     open_shifts = (
-        ShiftAssignment.objects.filter(work_date=day, employee__isnull=True)
+        ShiftAssignment.objects.filter(work_date__gte=start, work_date__lte=end, employee__isnull=True)
         .select_related("client", "position", "site")
-        .order_by("starts_at")
+        .order_by("work_date", "starts_at")
     )
     workers = list(Employee.objects.filter(status=EmployeeStatus.ACTIVE).prefetch_related("qualifications"))
     rows = []
@@ -68,6 +70,7 @@ def coverage(day=None) -> list[dict]:
                 "site_name": shift.site.name,
                 "position": shift.position.title,
                 "required_skill": shift.position.required_skill,
+                "work_date": shift.work_date.isoformat(),
                 "starts_at": shift.starts_at.isoformat(timespec="minutes"),
                 "ends_at": shift.ends_at.isoformat(timespec="minutes"),
                 "recommendations": recommendations,

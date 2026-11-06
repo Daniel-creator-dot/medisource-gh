@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 const links = [
   { href: "/command", label: "Command" },
   { href: "/floor", label: "Floor" },
+  { href: "/deployment", label: "Coverage" },
   { href: "/employees", label: "People" },
-  { href: "/deployment", label: "Deployment" },
   { href: "/finance", label: "Finance" },
   { href: "/accounting", label: "Books" },
   { href: "/clients", label: "Clients" },
@@ -19,15 +19,11 @@ const links = [
 export function Nav() {
   const path = usePathname();
   return (
-    <nav className="flex flex-wrap gap-1 text-sm">
+    <nav>
       {links.map((link) => {
         const active = path === link.href || path.startsWith(`${link.href}/`);
         return (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={active ? "rounded-full bg-white px-3 py-1 font-medium text-[#0b1f33]" : "rounded-full px-3 py-1 text-white/75 hover:bg-white/10 hover:text-white"}
-          >
+          <Link key={link.href} href={link.href} data-active={active ? "true" : "false"}>
             {link.label}
           </Link>
         );

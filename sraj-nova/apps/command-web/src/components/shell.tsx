@@ -6,20 +6,21 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 export function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b-2 border-[var(--orange)] bg-[#0b1f33] text-white">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <Link href="/command" aria-label="SRAJ NOVA command center">
-            <Mark light />
-          </Link>
-          <Nav />
+    <div className="app-shell">
+      <aside className="rail">
+        <Link href="/command" aria-label="SRAJ NOVA command center">
+          <Mark light />
+        </Link>
+        <p className="px-2 text-xs leading-5 text-white/55">Factory workforce, coverage, and client billing.</p>
+        <Nav />
+        <div className="mt-auto">
           <ThemeToggle />
         </div>
-      </header>
-      <div className="border-b border-[var(--line)] bg-[var(--card)] px-4 py-2 text-sm text-[var(--muted)]">
-        Demonstration data only. The factories shown are sample client organizations. SRAJ NOVA is the agency.
+      </aside>
+      <div className="stage">
+        <div className="banner">Sample factories only. SRAJ NOVA is the agency. Amounts come from stored shifts, rates, and journals.</div>
+        <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">{children}</main>
       </div>
-      <main className="mx-auto max-w-7xl px-4 py-6">{children}</main>
     </div>
   );
 }
