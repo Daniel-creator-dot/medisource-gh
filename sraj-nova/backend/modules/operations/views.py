@@ -14,7 +14,7 @@ from modules.operations.models import (
     ShiftAssignment,
     StaffingRequest,
 )
-from modules.operations.services import factory_floor, scoped_clients, scoped_employees
+from modules.operations.services import department_board, factory_floor, scoped_clients, scoped_employees
 from modules.organization.models import ClientSite, Department, JobPosition
 from modules.workforce.models import Employee
 
@@ -46,6 +46,15 @@ class AttendanceAdjustmentView(APIView):
             },
             status=201,
         )
+
+
+class DepartmentBoardView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role == AgencyRole.EMPLOYEE:
+            raise PermissionDenied()
+        return ok(department_board(request.user))
 
 
 class FactoryFloorView(APIView):

@@ -43,7 +43,7 @@ def test_client_cannot_see_another_clients_workers(api):
     assert api.get("/api/v1/clients/sample-tema-logistics/").status_code == 404
     center = api.get("/api/v1/command-center/")
     names = {row["client_name"] for row in center.json()["data"]["workers_by_client"]}
-    assert names == {"Sample Ashanti Textile Works"}
+    assert names == {"Sample Ashanti Cement Works"}
     assert center.json()["data"]["finance"]["weekly_gross_payroll"] == "480.00"
     assert "cash_available" not in center.json()["data"]["finance"]
     board = center.json()["data"]["board"]
@@ -108,6 +108,30 @@ def test_command_center_counts_come_from_records(api):
     assert data["board"]["payroll_approvals"] == []
     assert data["board"]["net_profitability"] is None
     assert any(cell["unfilled"] == 1 for site in data["board"]["heatmap"] for cell in site["days"])
+
+
+@pytest.mark.django_db
+def test_each_cement_department_has_its_own_roster(api):
+    from django.core.management import call_command
+
+    call_command("seed_demo")
+    auth(api, User.objects.get(email="worker.ama@sample.sraj.test"))
+    assert api.get("/api/v1/departments/").status_code == 403
+    auth(api, User.objects.get(email="client.ashanti@sample.sraj.test"))
+    plants = api.get("/api/v1/departments/").json()["data"]["plants"]
+    assert [plant["site_name"] for plant in plants] == ["Ashanti Grinding Plant"]
+    departments = {row["name"]: row for row in plants[0]["departments"]}
+    assert list(departments) == ["Production", "Packing", "Quality", "Mechanical", "Electrical", "Health and safety"]
+    assert departments["Production"]["on_duty"] == 1
+    assert departments["Packing"]["roster"] == []
+    assert departments["Quality"]["absent"] == 1
+    assert departments["Mechanical"]["deployed"] == 2
+    assert departments["Mechanical"]["late"] == 1
+    assert departments["Mechanical"]["open"] == 1
+    assert departments["Electrical"]["roster"] == []
+    auth(api, User.objects.get(email="nova.owner@sample.sraj.test"))
+    both = api.get("/api/v1/departments/").json()["data"]["plants"]
+    assert {plant["site_name"] for plant in both} == {"Ashanti Grinding Plant", "Takoradi Grinding Plant"}
 
 
 @pytest.mark.django_db

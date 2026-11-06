@@ -8,6 +8,7 @@ const pages = [
   ["command", "/command"],
   ["action", "/work"],
   ["floor", "/floor"],
+  ["department", "/departments"],
   ["coverage", "/deployment"],
   ["people", "/employees"],
   ["employee", "/employees"],

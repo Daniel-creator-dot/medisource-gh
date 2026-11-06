@@ -151,7 +151,10 @@ export default async function CommandPage() {
           <h1 className="display text-4xl font-bold">{data.as_of}</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">{data.active_workforce} active · {data.deployed_workers} deployed · {data.scheduled_today} scheduled today</p>
         </div>
-        <Link href="/work" className="rounded-full bg-[var(--blue)] px-4 py-2 text-sm font-semibold text-white">Do the work</Link>
+        <div className="flex gap-2">
+          <Link href="/departments" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[var(--blue)] shadow-[var(--shadow)]">Departments</Link>
+          <Link href="/work" className="rounded-full bg-[var(--blue)] px-4 py-2 text-sm font-semibold text-white">Do the work</Link>
+        </div>
       </header>
       <section className="pulse mb-4">
         {pulse.map((item) => (

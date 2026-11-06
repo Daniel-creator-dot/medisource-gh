@@ -54,11 +54,15 @@ def test_coverage_recommends_only_a_rested_skilled_worker_and_blocks_assignment(
     names = {row["employee_number"] for row in rows[0]["recommendations"]}
     assert names == {"SN-1004"}
     blocked = {row["employee_number"] for row in rows[0]["blocked"]}
-    assert {"SN-1001", "SN-1002", "SN-1003"} <= blocked
+    assert blocked == {"SN-1002"}
     ama = Employee.objects.get(agency_employee_number="SN-1001")
     refused = api.post(f"/api/v1/shifts/{rows[0]['shift_id']}/assign/", {"employee_id": str(ama.id)}, format="json")
     assert refused.status_code == 400
-    assert "11 hours" in refused.json()["error"]["message"]
+    assert "Missing required skill" in refused.json()["error"]["message"]
+    kofi = Employee.objects.get(agency_employee_number="SN-1002")
+    resting = api.post(f"/api/v1/shifts/{rows[0]['shift_id']}/assign/", {"employee_id": str(kofi.id)}, format="json")
+    assert resting.status_code == 400
+    assert "11 hours" in resting.json()["error"]["message"]
     abena = Employee.objects.get(agency_employee_number="SN-1004")
     accepted = api.post(f"/api/v1/shifts/{rows[0]['shift_id']}/assign/", {"employee_id": str(abena.id)}, format="json")
     assert accepted.status_code == 200
@@ -89,11 +93,11 @@ def test_factory_floor_scopes_sites_and_keeps_rates_with_the_agency(api):
     auth(api, User.objects.get(email="client.ashanti@sample.sraj.test"))
     floor = api.get("/api/v1/factory-floor/").json()["data"]
     assert floor["shifts"]
-    assert {row["client_name"] for row in floor["shifts"]} == {"Sample Ashanti Textile Works"}
+    assert {row["client_name"] for row in floor["shifts"]} == {"Sample Ashanti Cement Works"}
     assert "hourly_rate" not in floor["shifts"][0]
     finance = api.get("/api/v1/finance/").json()["data"]
     assert finance["sites"]
-    assert all(row["client_name"] == "Sample Ashanti Textile Works" for row in finance["sites"])
+    assert all(row["client_name"] == "Sample Ashanti Cement Works" for row in finance["sites"])
     auth(api, User.objects.get(email="nova.owner@sample.sraj.test"))
     agency = api.get("/api/v1/factory-floor/").json()["data"]
     priced = next(row for row in agency["shifts"] if row["worker_number"] == "SN-1001")

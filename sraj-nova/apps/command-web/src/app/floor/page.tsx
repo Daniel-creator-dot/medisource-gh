@@ -70,8 +70,11 @@ export default async function FloorPage() {
               {sites.filter((site) => floor.shifts.some((shift) => shift.work_date === date && `${shift.client_name} · ${shift.site_name}` === site)).map((site) => (
               <section key={`${date}-${site}`} className="panel p-4">
               <h3 className="display text-2xl font-bold">{site}</h3>
+              {[...new Set(floor.shifts.filter((shift) => shift.work_date === date && `${shift.client_name} · ${shift.site_name}` === site).map((shift) => shift.department))].map((department) => (
+              <div key={department} className="mt-4">
+              <h4 className="text-sm font-semibold tracking-[0.12em] text-[var(--muted)]">{department.toUpperCase()}</h4>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
-                {floor.shifts.filter((shift) => shift.work_date === date && `${shift.client_name} · ${shift.site_name}` === site).map((shift) => (
+                {floor.shifts.filter((shift) => shift.work_date === date && `${shift.client_name} · ${shift.site_name}` === site && shift.department === department).map((shift) => (
                   <article key={shift.id} className={`shift ${shift.attendance} ${shift.skill_cover === "gap" ? "gap" : ""}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -94,6 +97,8 @@ export default async function FloorPage() {
                   </article>
                 ))}
               </div>
+              </div>
+              ))}
             </section>
               ))}
             </section>

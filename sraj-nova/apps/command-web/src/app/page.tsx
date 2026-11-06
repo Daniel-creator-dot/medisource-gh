@@ -10,7 +10,7 @@ export default function LoginPage() {
           <Mark light />
           <p className="display mt-10 max-w-xl text-5xl font-bold leading-none sm:text-6xl">The factory floor, the wages, and the client invoice in one board.</p>
           <p className="mt-4 max-w-md text-white/75">
-            SRAJ NOVA recruits, deploys, and pays workers assigned to external factories. This sign-in uses demonstration accounts.
+            SRAJ NOVA places workers in a cement plant and keeps a roster for each department. This sign-in uses demonstration accounts.
           </p>
         </div>
         <p className="relative mt-10 text-sm text-white/55">GHS · Africa/Accra · Sample data</p>

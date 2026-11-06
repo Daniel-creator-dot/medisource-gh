@@ -45,7 +45,7 @@ def test_posting_balances_and_repost_reverses_instead_of_editing(api):
     assert books["trial_balance"]["total_debit"] == "3176.20"
     start = timezone.localdate()
     start = start - timedelta(days=start.weekday())
-    original = JournalEntry.objects.get(memo=f"Invoice Sample Ashanti Textile Works week {start.isoformat()}")
+    original = JournalEntry.objects.get(memo=f"Invoice Sample Ashanti Cement Works week {start.isoformat()}")
     original_debits = list(JournalLine.objects.filter(entry=original).values_list("debit", "credit"))
     second = api.post("/api/v1/accounting/post-week/", {}, format="json")
     assert second.status_code == 200

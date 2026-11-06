@@ -4,6 +4,7 @@ from modules.operations.views import (
     AssignShiftView,
     AttendanceAdjustmentView,
     CoverageView,
+    DepartmentBoardView,
     FactoryFloorView,
     OpenShiftView,
     RecordAttendanceView,
@@ -12,6 +13,7 @@ from modules.operations.views import (
 )
 
 urlpatterns = [
+    path("departments/", DepartmentBoardView.as_view(), name="departments"),
     path("factory-floor/", FactoryFloorView.as_view(), name="factory-floor"),
     path("work/options/", WorkOptionsView.as_view(), name="work-options"),
     path("shifts/", OpenShiftView.as_view(), name="open-shift"),

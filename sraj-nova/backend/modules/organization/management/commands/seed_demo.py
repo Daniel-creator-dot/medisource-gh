@@ -53,24 +53,23 @@ class Command(BaseCommand):
                 "timezone": "Africa/Accra",
             },
         )
-        ashanti = self._client("sample-ashanti-textile", "Sample Ashanti Textile Works", "Manufacturing")
-        tema = self._client("sample-tema-logistics", "Sample Tema Logistics Park", "Logistics")
-        weaving = self._site(ashanti, "Sample Weaving Hall", "Kumasi", "Ashanti", "Weaving")
-        yard = self._site(tema, "Sample Dispatch Yard", "Tema", "Greater Accra", "Dispatch")
-        weaver = JobPosition.objects.get_or_create(client=ashanti, title="Weaving operator")[0]
-        loader = JobPosition.objects.get_or_create(client=tema, title="Dispatch loader")[0]
-        weaver.required_skill = "weaving"
-        loader.required_skill = "dispatch"
-        weaver.save(update_fields=["required_skill", "updated_at"])
-        loader.save(update_fields=["required_skill", "updated_at"])
+        ashanti = self._client("sample-ashanti-textile", "Sample Ashanti Cement Works", "Cement")
+        takoradi = self._client("sample-tema-logistics", "Sample Takoradi Cement Works", "Cement")
         today = timezone.localdate()
+        ashanti_site, ashanti_departments = self._plant(ashanti, "Ashanti Grinding Plant", "Tema", "Greater Accra")
+        takoradi_site, takoradi_departments = self._plant(takoradi, "Takoradi Grinding Plant", "Takoradi", "Western")
+        mill = self._position(ashanti, "Mill operator", "milling", "Weaving operator")
+        packer = self._position(ashanti, "Packing operator", "packing", "")
+        laboratory = self._position(ashanti, "Laboratory assistant", "quality", "")
+        fitter = self._position(ashanti, "Fitter", "mechanical", "")
+        takoradi_packer = self._position(takoradi, "Packing operator", "packing", "Dispatch loader")
         people = [
-            ("SN-1001", "Ama", "Mensah", ashanti, weaving, weaver, LegalEmployerKind.AGENCY, None, time(6, 0), "on_time"),
-            ("SN-1002", "Kofi", "Boateng", ashanti, weaving, weaver, LegalEmployerKind.CLIENT, ashanti, time(6, 0), "late"),
-            ("SN-1003", "Esi", "Owusu", ashanti, weaving, weaver, LegalEmployerKind.AGENCY, None, time(6, 0), "absent"),
-            ("SN-2001", "Yaw", "Darko", tema, yard, loader, LegalEmployerKind.AGENCY, None, time(7, 0), "on_time"),
+            ("SN-1001", "Ama", "Mensah", ashanti, ashanti_site, ashanti_departments["Production"], mill, LegalEmployerKind.AGENCY, None, time(6, 0), "on_time", "milling", Decimal("20.00")),
+            ("SN-1002", "Kofi", "Boateng", ashanti, ashanti_site, ashanti_departments["Mechanical"], fitter, LegalEmployerKind.CLIENT, ashanti, time(6, 0), "late", "mechanical", Decimal("20.00")),
+            ("SN-1003", "Esi", "Owusu", ashanti, ashanti_site, ashanti_departments["Quality"], laboratory, LegalEmployerKind.AGENCY, None, time(6, 0), "absent", "quality", Decimal("20.00")),
+            ("SN-2001", "Yaw", "Darko", takoradi, takoradi_site, takoradi_departments["Packing"], takoradi_packer, LegalEmployerKind.AGENCY, None, time(7, 0), "on_time", "packing", Decimal("18.00")),
         ]
-        for number, first, last, client, site, position, employer, employer_client, start, attendance in people:
+        for number, first, last, client, site, department, position, employer, employer_client, start, attendance, skill, rate in people:
             employee = Employee.objects.update_or_create(
                 agency_employee_number=number,
                 defaults={"first_name": first, "last_name": last, "status": "active", "is_demo": True},
@@ -95,68 +94,91 @@ class Command(BaseCommand):
                 is_current=True,
                 defaults={
                     "client": client,
-                    "site": site["site"],
-                    "department": site["department"],
+                    "site": site,
+                    "department": department,
                     "position": position,
                     "starts_on": today - timedelta(days=30),
                 },
             )
+            ShiftAssignment.objects.filter(employee=employee).update(client=client, site=site, department=department, position=position)
             shift = ShiftAssignment.objects.update_or_create(
                 employee=employee,
                 work_date=today,
                 defaults={
                     "client": client,
-                    "site": site["site"],
-                    "department": site["department"],
+                    "site": site,
+                    "department": department,
                     "position": position,
                     "starts_at": start,
                     "ends_at": time(14, 0),
                 },
             )[0]
             self._punch(employee, today, start, attendance, shift)
-            self._skill(employee, "weaving" if position == weaver else "dispatch", Decimal("20.00") if position == weaver else Decimal("18.00"))
-        self._available_weaver(ashanti, weaving, weaver, today)
-        ShiftAssignment.objects.get_or_create(
-            client=ashanti,
-            site=weaving["site"],
-            department=weaving["department"],
-            position=weaver,
-            employee=None,
-            work_date=today,
-            defaults={"starts_at": time(14, 0), "ends_at": time(22, 0)},
+            self._skill(employee, skill, rate)
+        self._available_fitter(ashanti, ashanti_site, ashanti_departments["Mechanical"], fitter, today)
+        open_posts = list(
+            ShiftAssignment.objects.filter(client=ashanti, employee__isnull=True, work_date=today).order_by("created_at")
         )
-        ServiceContract.objects.update_or_create(
-            client=ashanti,
-            title="Sample weaving labour agreement",
-            defaults={
-                "billing_model": "cost_plus",
-                "management_fee_rate": Decimal("0.1200"),
-                "starts_on": today - timedelta(days=200),
-                "ends_on": today + timedelta(days=20),
-                "is_demo": True,
-            },
+        if open_posts:
+            open_post = open_posts[0]
+            open_post.site = ashanti_site
+            open_post.department = ashanti_departments["Mechanical"]
+            open_post.position = fitter
+            open_post.starts_at = time(14, 0)
+            open_post.ends_at = time(22, 0)
+            open_post.save()
+            ShiftAssignment.objects.filter(pk__in=[row.pk for row in open_posts[1:]]).delete()
+        else:
+            ShiftAssignment.objects.create(
+                client=ashanti,
+                site=ashanti_site,
+                department=ashanti_departments["Mechanical"],
+                position=fitter,
+                employee=None,
+                work_date=today,
+                starts_at=time(14, 0),
+                ends_at=time(22, 0),
+            )
+        ShiftAssignment.objects.filter(client=ashanti, employee__isnull=True).exclude(work_date=today).update(
+            site=ashanti_site,
+            department=ashanti_departments["Mechanical"],
+            position=fitter,
         )
-        ServiceContract.objects.update_or_create(
-            client=tema,
-            title="Sample dispatch labour agreement",
-            defaults={
-                "billing_model": "cost_plus",
-                "management_fee_rate": Decimal("0.1000"),
-                "starts_on": today - timedelta(days=100),
-                "ends_on": today + timedelta(days=200),
-                "is_demo": True,
-            },
-        )
-        StaffingRequest.objects.get_or_create(
-            client=ashanti,
-            site=weaving["site"],
-            title="Sample request for two night weavers",
-            defaults={"headcount": 2, "status": "pending", "is_demo": True},
-        )
-        OperationalAlert.objects.get_or_create(
-            message="Sample night shift at the weaving hall has no assigned operator.",
-            defaults={"client": ashanti, "severity": "warning", "is_open": True},
-        )
+        self._contract(ashanti, "Sample cement labour agreement", Decimal("0.1200"), today - timedelta(days=200), today + timedelta(days=20))
+        self._contract(takoradi, "Sample cement labour agreement", Decimal("0.1000"), today - timedelta(days=100), today + timedelta(days=200))
+        request = StaffingRequest.objects.filter(client=ashanti, is_demo=True).order_by("created_at").first()
+        if request is None:
+            StaffingRequest.objects.create(
+                client=ashanti,
+                site=ashanti_site,
+                title="Sample request for two night packers",
+                headcount=2,
+                status="pending",
+                is_demo=True,
+            )
+        else:
+            request.site = ashanti_site
+            request.title = "Sample request for two night packers"
+            request.headcount = 2
+            request.status = "pending"
+            request.save()
+        alert = OperationalAlert.objects.filter(client=ashanti).order_by("created_at").first()
+        if alert is None:
+            OperationalAlert.objects.create(
+                message="Sample afternoon shift in Mechanical has no assigned fitter.",
+                client=ashanti,
+                severity="warning",
+                is_open=True,
+            )
+        else:
+            alert.message = "Sample afternoon shift in Mechanical has no assigned fitter."
+            alert.is_open = True
+            alert.save()
+        for site in (ashanti_site, takoradi_site):
+            for name in ("Weaving", "Dispatch"):
+                stale = Department.objects.filter(site=site, name=name).first()
+                if stale is not None and not stale.shifts.exists() and not stale.deployments.exists():
+                    stale.delete()
         owner = self._user("nova.owner@sample.sraj.test", "Nana", "Sarpong", AgencyRole.AGENCY_OWNER)
         self._user("nova.ops@sample.sraj.test", "Akua", "Frimpong", AgencyRole.AGENCY_OPERATIONS)
         self._user("client.ashanti@sample.sraj.test", "Kojo", "Asare", AgencyRole.CLIENT_USER, client=ashanti)
@@ -165,18 +187,30 @@ class Command(BaseCommand):
         owner.is_demo = True
         owner.save(update_fields=["is_demo"])
         ama = Employee.objects.get(agency_employee_number="SN-1001")
-        Certification.objects.get_or_create(employee=ama, name="Sample loom safety certificate", defaults={"expires_on": today + timedelta(days=200)})
+        certificate = Certification.objects.filter(employee=ama).order_by("created_at").first()
+        if certificate is None:
+            Certification.objects.create(employee=ama, name="Sample mill safety certificate", expires_on=today + timedelta(days=200))
+        else:
+            certificate.name = "Sample mill safety certificate"
+            certificate.expires_on = today + timedelta(days=200)
+            certificate.save()
         LeaveRequest.objects.get_or_create(employee=ama, starts_on=today + timedelta(days=14), ends_on=today + timedelta(days=16), defaults={"status": "approved"})
-        RecruitmentEvent.objects.get_or_create(
-            employee=ama,
-            summary="Sample application accepted for a weaving operator role.",
-            defaults={"occurred_on": today - timedelta(days=45)},
-        )
-        HrNote.objects.get_or_create(
-            employee=ama,
-            visibility="standard",
-            defaults={"body": "Sample orientation completed at the weaving hall."},
-        )
+        hiring = RecruitmentEvent.objects.filter(employee=ama).order_by("created_at").first()
+        if hiring is None:
+            RecruitmentEvent.objects.create(
+                employee=ama,
+                summary="Sample application accepted for a mill operator role.",
+                occurred_on=today - timedelta(days=45),
+            )
+        else:
+            hiring.summary = "Sample application accepted for a mill operator role."
+            hiring.save()
+        note = HrNote.objects.filter(employee=ama, visibility="standard").first()
+        if note is None:
+            HrNote.objects.create(employee=ama, visibility="standard", body="Sample orientation completed at the grinding plant.")
+        else:
+            note.body = "Sample orientation completed at the grinding plant."
+            note.save()
         HrNote.objects.get_or_create(
             employee=ama,
             visibility="restricted",
@@ -195,12 +229,52 @@ class Command(BaseCommand):
             defaults={"legal_name": name, "sector": sector, "status": "active", "is_demo": True, "demo_label": DEMO},
         )[0]
 
-    def _site(self, client, name, city, region, department):
-        site = ClientSite.objects.get_or_create(
-            client=client, name=name, defaults={"city": city, "region": region, "is_demo": True}
-        )[0]
-        department_row = Department.objects.get_or_create(site=site, name=department)[0]
-        return {"site": site, "department": department_row}
+    def _plant(self, client, name, city, region):
+        site = client.sites.order_by("created_at").first()
+        if site is None:
+            site = ClientSite.objects.create(client=client, name=name, city=city, region=region, is_demo=True)
+        else:
+            site.name = name
+            site.city = city
+            site.region = region
+            site.is_demo = True
+            site.save(update_fields=["name", "city", "region", "is_demo", "updated_at"])
+        departments = {}
+        for label in ("Production", "Packing", "Quality", "Mechanical", "Electrical", "Health and safety"):
+            departments[label] = Department.objects.get_or_create(site=site, name=label)[0]
+        return site, departments
+
+    def _position(self, client, title, skill, previous_title):
+        row = JobPosition.objects.filter(client=client, title=title).first()
+        if row is None and previous_title:
+            row = JobPosition.objects.filter(client=client, title=previous_title).first()
+        if row is None:
+            return JobPosition.objects.create(client=client, title=title, required_skill=skill)
+        row.title = title
+        row.required_skill = skill
+        row.save(update_fields=["title", "required_skill", "updated_at"])
+        return row
+
+    def _contract(self, client, title, rate, starts_on, ends_on):
+        row = ServiceContract.objects.filter(client=client).order_by("-ends_on").first()
+        if row is None:
+            ServiceContract.objects.create(
+                client=client,
+                title=title,
+                billing_model="cost_plus",
+                management_fee_rate=rate,
+                starts_on=starts_on,
+                ends_on=ends_on,
+                is_demo=True,
+            )
+            return
+        row.title = title
+        row.billing_model = "cost_plus"
+        row.management_fee_rate = rate
+        row.starts_on = starts_on
+        row.ends_on = ends_on
+        row.is_demo = True
+        row.save()
 
     def _punch(self, employee, today, start, attendance, shift):
         AttendanceEvent.objects.filter(employee=employee, occurred_at__date=today).delete()
@@ -240,7 +314,7 @@ class Command(BaseCommand):
         Qualification.objects.get_or_create(employee=employee, skill=skill)
         PayProfile.objects.update_or_create(employee=employee, defaults={"hourly_rate": rate, "currency": "GHS"})
 
-    def _available_weaver(self, client, site, position, today):
+    def _available_fitter(self, client, site, department, position, today):
         employee = Employee.objects.update_or_create(
             agency_employee_number="SN-1004",
             defaults={"first_name": "Abena", "last_name": "Boateng", "status": "active", "is_demo": True},
@@ -265,10 +339,10 @@ class Command(BaseCommand):
             is_current=True,
             defaults={
                 "client": client,
-                "site": site["site"],
-                "department": site["department"],
+                "site": site,
+                "department": department,
                 "position": position,
                 "starts_on": today - timedelta(days=10),
             },
         )
-        self._skill(employee, "weaving", Decimal("20.00"))
+        self._skill(employee, "mechanical", Decimal("20.00"))

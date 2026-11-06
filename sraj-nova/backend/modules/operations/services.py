@@ -302,6 +302,116 @@ def factory_floor(user) -> dict:
     return {"as_of": today.isoformat(), "week_start": start.isoformat(), "shifts": rows, "certifications": certifications, "leave": leave}
 
 
+PLANT_DEPARTMENTS = ("Production", "Packing", "Quality", "Mechanical", "Electrical", "Health and safety")
+
+
+def department_board(user) -> dict:
+    """Roster for each plant department from stored deployments and today's shifts."""
+    from modules.organization.models import ClientSite
+
+    clients = scoped_clients(user)
+    today = timezone.localdate()
+    shifts = list(
+        ShiftAssignment.objects.filter(work_date=today, client__in=clients).select_related("department", "position", "employee")
+    )
+    deployments = list(
+        Deployment.objects.filter(is_current=True, client__in=clients).select_related("department", "position", "employee")
+    )
+    plants = []
+    sites = (
+        ClientSite.objects.filter(client__in=clients)
+        .select_related("client")
+        .prefetch_related("departments")
+        .order_by("client__legal_name", "name")
+    )
+    for site in sites:
+        rows = []
+        ordered = sorted(
+            site.departments.all(),
+            key=lambda department: PLANT_DEPARTMENTS.index(department.name) if department.name in PLANT_DEPARTMENTS else len(PLANT_DEPARTMENTS),
+        )
+        for department in ordered:
+            dep_shifts = [shift for shift in shifts if shift.department_id == department.id]
+            dep_people = [row for row in deployments if row.department_id == department.id]
+            roster = []
+            seen = set()
+            on_duty = late = absent = 0
+            for shift in dep_shifts:
+                if shift.employee_id is None:
+                    roster.append(
+                        {
+                            "employee_id": None,
+                            "worker_number": None,
+                            "worker_name": None,
+                            "position": shift.position.title,
+                            "attendance": "open",
+                            "starts_at": shift.starts_at.strftime("%H:%M"),
+                            "ends_at": shift.ends_at.strftime("%H:%M"),
+                        }
+                    )
+                    continue
+                state = _attendance_state(shift.employee_id, today, shift.starts_at)
+                if state == "on_duty":
+                    on_duty += 1
+                elif state == "late":
+                    late += 1
+                elif state == "absent":
+                    absent += 1
+                seen.add(shift.employee_id)
+                roster.append(
+                    {
+                        "employee_id": str(shift.employee_id),
+                        "worker_number": shift.employee.agency_employee_number,
+                        "worker_name": f"{shift.employee.first_name} {shift.employee.last_name}",
+                        "position": shift.position.title,
+                        "attendance": state,
+                        "starts_at": shift.starts_at.strftime("%H:%M"),
+                        "ends_at": shift.ends_at.strftime("%H:%M"),
+                    }
+                )
+            for row in dep_people:
+                if row.employee_id in seen:
+                    continue
+                roster.append(
+                    {
+                        "employee_id": str(row.employee_id),
+                        "worker_number": row.employee.agency_employee_number,
+                        "worker_name": f"{row.employee.first_name} {row.employee.last_name}",
+                        "position": row.position.title,
+                        "attendance": "not_rostered",
+                        "starts_at": None,
+                        "ends_at": None,
+                    }
+                )
+            rows.append(
+                {
+                    "id": str(department.id),
+                    "name": department.name,
+                    "deployed": len(dep_people),
+                    "filled": sum(1 for shift in dep_shifts if shift.employee_id),
+                    "open": sum(1 for shift in dep_shifts if shift.employee_id is None),
+                    "on_duty": on_duty,
+                    "late": late,
+                    "absent": absent,
+                    "roster": roster,
+                }
+            )
+        plants.append(
+            {
+                "client_name": site.client.legal_name,
+                "site_name": site.name,
+                "city": site.city,
+                "region": site.region,
+                "departments": rows,
+            }
+        )
+    return {
+        "as_of": today.isoformat(),
+        "plants": plants,
+        "note": "Each department keeps its own roster. The split follows a Ghana cement grinding plant: production, packing, quality, mechanical, electrical, and health and safety. These are sample records, not a GHACEM staff list.",
+    }
+
+
 def _finance_block(user) -> dict:
     from modules.finance.services import finance_summary
 
