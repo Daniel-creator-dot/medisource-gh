@@ -181,6 +181,7 @@ class Command(BaseCommand):
                     stale.delete()
         owner = self._user("nova.owner@sample.sraj.test", "Nana", "Sarpong", AgencyRole.AGENCY_OWNER)
         self._user("nova.ops@sample.sraj.test", "Akua", "Frimpong", AgencyRole.AGENCY_OPERATIONS)
+        self._user("nova.finance@sample.sraj.test", "Yaa", "Asante", AgencyRole.AGENCY_FINANCE)
         self._user("client.ashanti@sample.sraj.test", "Kojo", "Asare", AgencyRole.CLIENT_USER, client=ashanti)
         worker = Employee.objects.get(agency_employee_number="SN-1001")
         self._user("worker.ama@sample.sraj.test", "Ama", "Mensah", AgencyRole.EMPLOYEE, employee=worker)

@@ -201,6 +201,57 @@ def test_csrf_accepts_the_proxy_path_without_a_trailing_slash(api):
     assert agency.json()["data"]["trading_name"] == "SRAJ NOVA"
     users = api.get("/api/v1/auth/users/")
     assert users.status_code == 200
-    assert len(users.json()["data"]) == 4
+    assert len(users.json()["data"]) == 5
+    assert "nova.finance@sample.sraj.test" in {row["email"] for row in users.json()["data"]}
     assert Client.objects.count() == 2
     assert timezone.localdate() + timedelta(days=1)
+
+
+def post_json(api, path, payload):
+    token = api.get("/api/v1/auth/csrf/").json()["data"]["csrf_token"]
+    return api.post(path, payload, format="json", HTTP_X_CSRFTOKEN=token)
+
+
+@pytest.mark.django_db
+def test_owner_assigns_only_a_role_the_account_can_hold(api):
+    from django.core.management import call_command
+
+    call_command("seed_demo")
+    owner = User.objects.get(email="nova.owner@sample.sraj.test")
+    auth(api, owner)
+    finance = User.objects.get(email="nova.finance@sample.sraj.test")
+    assert finance.role == AgencyRole.AGENCY_FINANCE
+    ops = User.objects.get(email="nova.ops@sample.sraj.test")
+    changed = post_json(api, f"/api/v1/auth/users/{ops.id}/role/", {"role": "agency_finance"})
+    assert changed.status_code == 200
+    ops.refresh_from_db()
+    assert ops.role == AgencyRole.AGENCY_FINANCE
+    post_json(api, f"/api/v1/auth/users/{ops.id}/role/", {"role": "agency_operations"})
+    refused_owner = post_json(api, f"/api/v1/auth/users/{owner.id}/role/", {"role": "agency_operations"})
+    assert refused_owner.status_code == 400
+    assert refused_owner.json()["error"]["code"] == "invalid_role"
+    client_user = User.objects.get(email="client.ashanti@sample.sraj.test")
+    refused_employee = post_json(api, f"/api/v1/auth/users/{client_user.id}/role/", {"role": "employee"})
+    assert refused_employee.status_code == 400
+    auth(api, User.objects.get(email="nova.ops@sample.sraj.test"))
+    assert post_json(api, f"/api/v1/auth/users/{finance.id}/role/", {"role": "agency_owner"}).status_code == 403
+
+
+@pytest.mark.django_db
+def test_password_change_checks_the_current_password(api):
+    from django.core.management import call_command
+
+    call_command("seed_demo")
+    user = User.objects.get(email="nova.finance@sample.sraj.test")
+    auth(api, user)
+    settings_page = api.get("/api/v1/auth/settings/")
+    assert settings_page.status_code == 200
+    assert settings_page.json()["data"]["role_label"] == "Agency finance"
+    assert settings_page.json()["data"]["can_manage_roles"] is False
+    assert settings_page.json()["data"]["late_grace_minutes"] == 10
+    wrong = post_json(api, "/api/v1/auth/password/", {"current_password": "wrong-password", "new_password": "Another-Pass-1"})
+    assert wrong.status_code == 400
+    changed = post_json(api, "/api/v1/auth/password/", {"current_password": "Demo-Only-Change-Me-1", "new_password": "Another-Pass-1"})
+    assert changed.status_code == 200
+    user.refresh_from_db()
+    assert user.check_password("Another-Pass-1")

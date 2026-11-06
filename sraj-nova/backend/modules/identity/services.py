@@ -47,3 +47,73 @@ def verify_totp(user: User, code: str) -> bool:
 
 def authenticate_user(*, email: str, password: str) -> User | None:
     return authenticate(username=email, password=password)
+
+
+ROLE_LABELS = {
+    AgencyRole.AGENCY_OWNER: "Agency owner",
+    AgencyRole.AGENCY_OPERATIONS: "Agency operations",
+    AgencyRole.AGENCY_FINANCE: "Agency finance",
+    AgencyRole.CLIENT_USER: "Client user",
+    AgencyRole.EMPLOYEE: "Employee",
+}
+
+ROLE_OPENS = {
+    AgencyRole.AGENCY_OWNER: ["Command", "Departments", "Floor", "Actions", "Coverage", "People", "Clients", "Finance", "Books", "Agency", "Roles", "Settings"],
+    AgencyRole.AGENCY_OPERATIONS: ["Command", "Departments", "Floor", "Actions", "Coverage", "People", "Clients", "Finance", "Books", "Agency", "Settings"],
+    AgencyRole.AGENCY_FINANCE: ["Command", "Departments", "Floor", "Actions", "Coverage", "People", "Clients", "Finance", "Books", "Agency", "Settings"],
+    AgencyRole.CLIENT_USER: ["Command", "Departments", "Floor", "Actions", "Coverage", "People", "Clients", "Finance", "Settings"],
+    AgencyRole.EMPLOYEE: ["My record", "Settings"],
+}
+
+
+class RoleAssignmentError(Exception):
+    def __init__(self, message: str):
+        self.message = message
+
+
+def assignable_roles(user: User) -> list[str]:
+    choices = [AgencyRole.AGENCY_OWNER, AgencyRole.AGENCY_OPERATIONS, AgencyRole.AGENCY_FINANCE]
+    if user.client_id:
+        choices.append(AgencyRole.CLIENT_USER)
+    if user.employee_id:
+        choices.append(AgencyRole.EMPLOYEE)
+    return choices
+
+
+def assign_role(target: User, role: str) -> None:
+    if role not in ROLE_LABELS:
+        raise RoleAssignmentError("Choose one of the five roles.")
+    if role not in assignable_roles(target):
+        if role == AgencyRole.CLIENT_USER:
+            raise RoleAssignmentError("This account is not linked to one client, so it cannot be a client user.")
+        raise RoleAssignmentError("This account has no worker record, so it cannot be an employee.")
+    if target.role == AgencyRole.AGENCY_OWNER and role != AgencyRole.AGENCY_OWNER:
+        another_owner = User.objects.filter(role=AgencyRole.AGENCY_OWNER, is_active=True).exclude(pk=target.pk).exists()
+        if not another_owner:
+            raise RoleAssignmentError("This is the only agency owner. Give another account that role first.")
+    target.role = role
+    target.save(update_fields=["role", "updated_at"])
+
+
+def change_password(user: User, current: str, new: str) -> None:
+    if not user.check_password(current):
+        raise RoleAssignmentError("The current password is not correct.")
+    if len(new) < 8:
+        raise RoleAssignmentError("Use at least 8 characters.")
+    user.set_password(new)
+    user.save(update_fields=["password", "updated_at"])
+
+
+def account_settings(user: User) -> dict:
+    return {
+        "email": user.email,
+        "name": user.get_full_name(),
+        "role": user.role,
+        "role_label": ROLE_LABELS[user.role],
+        "opens": ROLE_OPENS[user.role],
+        "mfa_enabled": user.mfa_enabled,
+        "mfa_required_for_owner": settings.MFA_REQUIRED_FOR_AGENCY_OWNER,
+        "late_grace_minutes": settings.LATE_GRACE_MINUTES,
+        "min_rest_hours": settings.MIN_REST_HOURS,
+        "can_manage_roles": user.role == AgencyRole.AGENCY_OWNER,
+    }

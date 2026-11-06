@@ -18,6 +18,8 @@ const pages = [
   ["client", "/clients"],
   ["agency", "/agency"],
   ["access", "/access"],
+  ["role", "/access"],
+  ["setting", "/settings"],
   ["record", "/me"],
 ] as const;
 

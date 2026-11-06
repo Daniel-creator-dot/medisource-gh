@@ -12,60 +12,69 @@ import {
   Landmark,
   LayoutDashboard,
   ListChecks,
+  Settings,
   UserRound,
   Users,
   Wallet,
 } from "lucide-react";
 
+const agency = ["agency_owner", "agency_operations", "agency_finance"];
+const plant = [...agency, "client_user"];
+
 const groups = [
   {
     label: "Operate",
     links: [
-      { href: "/command", label: "Command", icon: LayoutDashboard },
-      { href: "/work", label: "Actions", icon: ListChecks },
-      { href: "/floor", label: "Floor", icon: Factory },
-      { href: "/departments", label: "Departments", icon: Layers },
-      { href: "/deployment", label: "Coverage", icon: CalendarClock },
+      { href: "/command", label: "Command", icon: LayoutDashboard, roles: plant },
+      { href: "/work", label: "Actions", icon: ListChecks, roles: plant },
+      { href: "/floor", label: "Floor", icon: Factory, roles: plant },
+      { href: "/departments", label: "Departments", icon: Layers, roles: plant },
+      { href: "/deployment", label: "Coverage", icon: CalendarClock, roles: plant },
     ],
   },
   {
     label: "Money",
     links: [
-      { href: "/finance", label: "Finance", icon: Wallet },
-      { href: "/accounting", label: "Books", icon: BookOpen },
+      { href: "/finance", label: "Finance", icon: Wallet, roles: plant },
+      { href: "/accounting", label: "Books", icon: BookOpen, roles: agency },
     ],
   },
   {
     label: "Records",
     links: [
-      { href: "/employees", label: "People", icon: Users },
-      { href: "/clients", label: "Clients", icon: Building2 },
-      { href: "/agency", label: "Agency", icon: Landmark },
-      { href: "/access", label: "Access", icon: KeyRound },
-      { href: "/me", label: "My record", icon: UserRound },
+      { href: "/employees", label: "People", icon: Users, roles: plant },
+      { href: "/clients", label: "Clients", icon: Building2, roles: plant },
+      { href: "/agency", label: "Agency", icon: Landmark, roles: agency },
+      { href: "/access", label: "Roles", icon: KeyRound, roles: ["agency_owner"] },
+      { href: "/me", label: "My record", icon: UserRound, roles: ["employee"] },
+      { href: "/settings", label: "Settings", icon: Settings, roles: [...plant, "employee"] },
     ],
   },
 ];
 
-export function Nav() {
+export function Nav({ role }: { role: string }) {
   const path = usePathname();
   return (
     <nav>
-      {groups.map((group) => (
-        <div key={group.label}>
-          <p className="nav-label">{group.label}</p>
-          {group.links.map((link) => {
-            const active = path === link.href || path.startsWith(`${link.href}/`);
-            const Icon = link.icon;
-            return (
-              <Link key={link.href} href={link.href} data-active={active ? "true" : "false"}>
-                <Icon aria-hidden="true" size={18} />
-                {link.label}
-              </Link>
-            );
-          })}
-        </div>
-      ))}
+      {groups.map((group) => {
+        const links = group.links.filter((link) => link.roles.includes(role));
+        if (links.length === 0) return null;
+        return (
+          <div key={group.label}>
+            <p className="nav-label">{group.label}</p>
+            {links.map((link) => {
+              const active = path === link.href || path.startsWith(`${link.href}/`);
+              const Icon = link.icon;
+              return (
+                <Link key={link.href} href={link.href} data-active={active ? "true" : "false"}>
+                  <Icon aria-hidden="true" size={18} />
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
+        );
+      })}
     </nav>
   );
 }

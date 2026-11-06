@@ -9,8 +9,14 @@ from modules.identity.cookies import clear_auth_cookies, set_auth_cookies
 from modules.identity.serializers import CodeSerializer, LoginSerializer, UserSerializer
 from modules.identity.models import AgencyRole, User
 from modules.identity.services import (
+    ROLE_LABELS,
+    RoleAssignmentError,
+    account_settings,
+    assign_role,
+    assignable_roles,
     authenticate_user,
     begin_enrollment,
+    change_password,
     confirm_enrollment,
     issue_token_pair,
     owner_must_enroll,
@@ -97,26 +103,70 @@ class MeView(APIView):
         return ok(UserSerializer(request.user).data)
 
 
+class AccountSettingsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return ok(account_settings(request.user))
+
+
+class PasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        current = request.data.get("current_password") or ""
+        new = request.data.get("new_password") or ""
+        try:
+            change_password(request.user, current, new)
+        except RoleAssignmentError as exc:
+            return error_response("invalid_password", exc.message, 400)
+        record_audit(actor=request.user, action="auth.password_changed", resource_type="user", resource_id=request.user.id)
+        return ok({"changed": True})
+
+
+def _account_row(user: User) -> dict:
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "name": user.get_full_name(),
+        "role": user.role,
+        "role_label": ROLE_LABELS[user.role],
+        "client_name": user.client.legal_name if user.client_id else None,
+        "employee_number": user.employee.agency_employee_number if user.employee_id else None,
+        "assignable_roles": [{"value": role, "label": ROLE_LABELS[role]} for role in assignable_roles(user)],
+        "mfa_enabled": user.mfa_enabled,
+        "is_demo": user.is_demo,
+    }
+
+
 class AccessUsersView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         if request.user.role != AgencyRole.AGENCY_OWNER:
             raise PermissionDenied()
-        users = User.objects.order_by("email")
-        return ok(
-            [
-                {
-                    "id": str(user.id),
-                    "email": user.email,
-                    "name": user.get_full_name(),
-                    "role": user.role,
-                    "mfa_enabled": user.mfa_enabled,
-                    "is_demo": user.is_demo,
-                }
-                for user in users
-            ]
-        )
+        users = User.objects.select_related("client", "employee").order_by("email")
+        return ok([_account_row(user) for user in users])
+
+
+class AssignRoleView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id):
+        if request.user.role != AgencyRole.AGENCY_OWNER:
+            raise PermissionDenied()
+        target = User.objects.select_related("client", "employee").filter(pk=user_id).first()
+        if target is None:
+            from rest_framework.exceptions import NotFound
+
+            raise NotFound()
+        try:
+            assign_role(target, request.data.get("role") or "")
+        except RoleAssignmentError as exc:
+            return error_response("invalid_role", exc.message, 400)
+        record_audit(actor=request.user, action="auth.role_changed", resource_type="user", resource_id=target.id)
+        target.refresh_from_db()
+        return ok(_account_row(target))
 
 
 class LogoutView(APIView):
