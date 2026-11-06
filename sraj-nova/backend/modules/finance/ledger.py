@@ -4,7 +4,17 @@ from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
 
-from modules.finance.models import Account, ClientInvoice, ClientReceipt, JournalEntry, JournalLine
+from modules.finance.models import (
+    Account,
+    AccountGroup,
+    AccountingPeriod,
+    ClientInvoice,
+    ClientReceipt,
+    FiscalYear,
+    JournalEntry,
+    JournalLine,
+    JournalStatus,
+)
 from modules.finance.services import money, money_str
 
 CHART = (
@@ -13,6 +23,12 @@ CHART = (
     ("2000", "Wages payable", "liability"),
     ("3000", "Opening equity", "equity"),
     ("4000", "Agency fee revenue", "income"),
+)
+GROUPS = (
+    ("AS", "Assets", "asset"),
+    ("LI", "Liabilities", "liability"),
+    ("EQ", "Equity", "equity"),
+    ("IN", "Income", "income"),
 )
 OPENING_MEMO = "Sample opening cash balance"
 
@@ -24,8 +40,44 @@ class BooksError(Exception):
 
 
 def ensure_chart() -> None:
+    groups = {}
+    for code, name, account_type in GROUPS:
+        group, _created = AccountGroup.objects.get_or_create(code=code, defaults={"name": name, "account_type": account_type})
+        groups[account_type] = group
     for code, name, account_type in CHART:
-        Account.objects.get_or_create(code=code, defaults={"name": name, "account_type": account_type, "is_demo": True})
+        account, _created = Account.objects.get_or_create(
+            code=code, defaults={"name": name, "account_type": account_type, "is_demo": True}
+        )
+        if account.group_id is None:
+            account.group = groups[account_type]
+            account.save(update_fields=["group", "updated_at"])
+    ensure_periods()
+
+
+def ensure_periods(day=None):
+    day = day or timezone.localdate()
+    start = day.replace(month=1, day=1)
+    end = day.replace(month=12, day=31)
+    fiscal, _created = FiscalYear.objects.get_or_create(
+        starts_on=start, defaults={"ends_on": end, "label": str(day.year), "status": "open"}
+    )
+    period, _created = AccountingPeriod.objects.get_or_create(
+        fiscal_year=fiscal,
+        starts_on=start,
+        defaults={"ends_on": end, "name": str(day.year), "status": fiscal.status},
+    )
+    JournalEntry.objects.filter(period__isnull=True, entry_date__gte=period.starts_on, entry_date__lte=period.ends_on).update(period=period)
+    return period
+
+
+def period_for(day):
+    ensure_periods(day)
+    period = AccountingPeriod.objects.filter(starts_on__lte=day, ends_on__gte=day).first()
+    if period is None:
+        raise BooksError("period_missing", "No accounting period covers that date.")
+    if period.status != "open":
+        raise BooksError("period_closed", "That accounting period is closed.")
+    return period
 
 
 def _account(code: str) -> Account:
@@ -49,9 +101,10 @@ def invoice_outstanding(invoice: ClientInvoice) -> Decimal:
 
 def cash_balance():
     account = Account.objects.filter(code="1000").first()
-    if account is None or not account.lines.exists():
+    posted = account.lines.filter(entry__status=JournalStatus.POSTED) if account is not None else JournalLine.objects.none()
+    if account is None or not posted.exists():
         return None
-    totals = account.lines.aggregate(debit=Sum("debit"), credit=Sum("credit"))
+    totals = posted.aggregate(debit=Sum("debit"), credit=Sum("credit"))
     return money((totals["debit"] or Decimal("0.00")) - (totals["credit"] or Decimal("0.00")))
 
 
@@ -61,11 +114,14 @@ def _save_entry(*, entry_date, memo: str, lines: list[dict], invoice=None, rever
     credits = sum((money(row["credit"]) for row in lines), Decimal("0.00"))
     if debits != credits or debits <= 0:
         raise BooksError("unbalanced", "The journal does not balance.")
+    period = period_for(entry_date)
     entry = JournalEntry.objects.create(
         entry_date=entry_date,
         memo=memo,
         invoice=invoice,
         reverses=reverses,
+        period=period,
+        status=JournalStatus.POSTED,
         is_demo=True,
     )
     for row in lines:
@@ -76,6 +132,72 @@ def _save_entry(*, entry_date, memo: str, lines: list[dict], invoice=None, rever
             credit=money(row["credit"]),
         )
     return entry
+
+
+def _parse_lines(lines) -> list[dict]:
+    if not isinstance(lines, list) or not lines:
+        raise BooksError("lines_required", "Add at least one journal line.")
+    parsed = []
+    for row in lines:
+        if not isinstance(row, dict):
+            raise BooksError("invalid_line", "Each journal line needs an account and an amount.")
+        try:
+            debit = money(row.get("debit") or 0)
+            credit = money(row.get("credit") or 0)
+        except Exception as exc:
+            raise BooksError("invalid_line", "Enter a debit or a credit amount.") from exc
+        if (debit > 0 and credit > 0) or (debit == 0 and credit == 0):
+            raise BooksError("invalid_line", "Each line needs a debit or a credit, not both.")
+        code = str(row.get("code") or "").strip()
+        if not Account.objects.filter(code=code).exists():
+            raise BooksError("unknown_account", "Choose an account from the chart.")
+        parsed.append({"code": code, "debit": debit, "credit": credit})
+    return parsed
+
+
+@transaction.atomic
+def save_manual_draft(*, entry_date, memo: str, lines) -> JournalEntry:
+    ensure_chart()
+    memo = memo.strip()
+    if not memo:
+        raise BooksError("memo_required", "A memo is required.")
+    parsed = _parse_lines(lines)
+    entry = JournalEntry.objects.create(entry_date=entry_date, memo=memo, status=JournalStatus.DRAFT, is_demo=False)
+    for row in parsed:
+        JournalLine.objects.create(entry=entry, account=_account(row["code"]), debit=row["debit"], credit=row["credit"])
+    return entry
+
+
+@transaction.atomic
+def post_draft(entry: JournalEntry) -> JournalEntry:
+    if entry.status != JournalStatus.DRAFT:
+        raise BooksError("already_posted", "This journal is already posted.")
+    rows = list(entry.lines.all())
+    debits = sum((money(row.debit) for row in rows), Decimal("0.00"))
+    credits = sum((money(row.credit) for row in rows), Decimal("0.00"))
+    if debits != credits or debits <= 0:
+        raise BooksError("unbalanced", "The journal does not balance.")
+    entry.period = period_for(entry.entry_date)
+    entry.status = JournalStatus.POSTED
+    entry.save(update_fields=["period", "status", "updated_at"])
+    return entry
+
+
+@transaction.atomic
+def reverse_entry(entry: JournalEntry) -> JournalEntry:
+    if entry.status != JournalStatus.POSTED:
+        raise BooksError("not_posted", "Only a posted journal can be reversed.")
+    if entry.reversals.exists():
+        raise BooksError("already_reversed", "This journal already has a reversal.")
+    return _reverse(entry)
+
+
+def set_period_status(period: AccountingPeriod, status: str) -> AccountingPeriod:
+    if status not in {"open", "closed"}:
+        raise BooksError("invalid_period", "A period is open or closed.")
+    period.status = status
+    period.save(update_fields=["status", "updated_at"])
+    return period
 
 
 def post_opening_cash(amount, occurred_on) -> None:
@@ -170,7 +292,7 @@ def trial_balance() -> dict:
     total_debit = Decimal("0.00")
     total_credit = Decimal("0.00")
     for account in Account.objects.order_by("code"):
-        totals = account.lines.aggregate(debit=Sum("debit"), credit=Sum("credit"))
+        totals = account.lines.filter(entry__status=JournalStatus.POSTED).aggregate(debit=Sum("debit"), credit=Sum("credit"))
         debit = money(totals["debit"] or 0)
         credit = money(totals["credit"] or 0)
         total_debit += debit
@@ -189,6 +311,37 @@ def trial_balance() -> dict:
         "total_debit": money_str(total_debit),
         "total_credit": money_str(total_credit),
         "balanced": total_debit == total_credit,
+    }
+
+
+def ledger_position() -> dict:
+    """Classify posted lines. Fee revenue is not reported as profit."""
+    sheet = trial_balance()
+    sections: dict[str, list[dict]] = {"asset": [], "liability": [], "equity": [], "income": [], "expense": []}
+    totals = {key: Decimal("0.00") for key in sections}
+    for row in sheet["rows"]:
+        debit = money(row["debit"])
+        credit = money(row["credit"])
+        kind = row["account_type"] if row["account_type"] in sections else "expense"
+        balance = money(credit - debit) if kind in {"liability", "equity", "income"} else money(debit - credit)
+        sections[kind].append({"code": row["code"], "name": row["name"], "balance": money_str(balance)})
+        totals[kind] += balance
+    fee = next((row["balance"] for row in sections["income"] if row["code"] == "4000"), "0.00")
+    return {
+        "basis": (
+            "Posted journal lines only. Employment cost is held as wages payable, not as an expense. "
+            "PAYE, pension, and net pay are not posted."
+        ),
+        "sections": sections,
+        "assets": money_str(totals["asset"]),
+        "liabilities": money_str(totals["liability"]),
+        "equity": money_str(totals["equity"]),
+        "income": money_str(totals["income"]),
+        "expenses": money_str(totals["expense"]),
+        "recognized_fee_revenue": fee,
+        "operating_profit": None,
+        "operating_profit_reason": "No expense account has been posted, so fee revenue is not operating profit.",
+        "trial_balance_balanced": sheet["balanced"],
     }
 
 
@@ -227,7 +380,9 @@ def books_snapshot() -> dict:
                 "id": str(entry.id),
                 "entry_date": entry.entry_date.isoformat(),
                 "memo": entry.memo,
+                "status": entry.status,
                 "reversal": entry.reverses_id is not None,
+                "reversed": entry.reversals.exists(),
                 "lines": [
                     {
                         "code": line.account.code,
@@ -242,8 +397,23 @@ def books_snapshot() -> dict:
     invoices = ClientInvoice.objects.select_related("client").order_by("client__legal_name")
     return {
         "accounts": [
-            {"code": account.code, "name": account.name, "account_type": account.account_type}
-            for account in Account.objects.order_by("code")
+            {
+                "code": account.code,
+                "name": account.name,
+                "account_type": account.account_type,
+                "group": account.group.name if account.group_id else None,
+            }
+            for account in Account.objects.select_related("group").order_by("code")
+        ],
+        "periods": [
+            {
+                "id": str(period.id),
+                "name": period.name,
+                "starts_on": period.starts_on.isoformat(),
+                "ends_on": period.ends_on.isoformat(),
+                "status": period.status,
+            }
+            for period in AccountingPeriod.objects.order_by("starts_on")
         ],
         "journals": journals,
         "trial_balance": trial_balance(),

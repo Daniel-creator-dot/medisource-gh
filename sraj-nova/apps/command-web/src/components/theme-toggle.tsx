@@ -9,7 +9,7 @@ export function ThemeToggle() {
   }
 
   return (
-    <button type="button" onClick={toggle} className="w-full rounded-xl border border-white/20 px-3 py-2 text-left text-sm text-white/80 hover:bg-white/10">
+    <button type="button" onClick={toggle} className="w-full rounded-2xl bg-[var(--canvas)] px-3 py-2 text-left text-sm font-semibold text-[var(--ink)]">
       Theme
     </button>
   );

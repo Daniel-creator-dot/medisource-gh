@@ -46,6 +46,10 @@ def test_client_cannot_see_another_clients_workers(api):
     assert names == {"Sample Ashanti Textile Works"}
     assert center.json()["data"]["finance"]["weekly_gross_payroll"] == "480.00"
     assert "cash_available" not in center.json()["data"]["finance"]
+    board = center.json()["data"]["board"]
+    assert board["invoice_weeks"] == [{"week_start": board["attendance_week"][0]["date"], "employment_cost": "480.00", "agency_fee": "57.60", "outstanding": "537.60"}]
+    assert board["net_profitability"] is None
+    assert all("Tema" not in item["text"] and "opening cash" not in item["text"].lower() for item in board["activity"])
     users = api.get("/api/v1/auth/users/")
     assert users.status_code == 403
 
@@ -92,6 +96,18 @@ def test_command_center_counts_come_from_records(api):
     assert data["finance"]["cash_available"] == "2500.00"
     assert data["finance"]["statutory_liabilities"] is None
     assert data["finance"]["estimated_net_payroll"] is None
+    week = data["board"]["attendance_week"]
+    assert len(week) == 7
+    today_row = next(row for row in week if row["is_today"])
+    assert today_row["scheduled"] == 4
+    assert today_row["unfilled"] == 1
+    assert today_row["absent"] == 1
+    assert all(row["absent"] is None for row in week if row["future"])
+    assert data["board"]["invoice_weeks"][0]["employment_cost"] == "606.00"
+    assert data["board"]["invoice_weeks"][0]["agency_fee"] == "70.20"
+    assert data["board"]["payroll_approvals"] == []
+    assert data["board"]["net_profitability"] is None
+    assert any(cell["unfilled"] == 1 for site in data["board"]["heatmap"] for cell in site["days"])
 
 
 @pytest.mark.django_db

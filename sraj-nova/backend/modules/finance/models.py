@@ -29,11 +29,41 @@ class ClientInvoice(UUIDModel):
         return self.employment_cost + self.agency_fee
 
 
+class AccountGroup(UUIDModel):
+    code = models.CharField(max_length=8, unique=True)
+    name = models.CharField(max_length=120)
+    account_type = models.CharField(max_length=16)
+
+
 class Account(UUIDModel):
     code = models.CharField(max_length=8, unique=True)
     name = models.CharField(max_length=120)
     account_type = models.CharField(max_length=16)
+    group = models.ForeignKey(AccountGroup, null=True, blank=True, on_delete=models.PROTECT, related_name="accounts")
     is_demo = models.BooleanField(default=True)
+
+
+class FiscalYear(UUIDModel):
+    label = models.CharField(max_length=16)
+    starts_on = models.DateField(unique=True)
+    ends_on = models.DateField()
+    status = models.CharField(max_length=16, default="open")
+
+
+class AccountingPeriod(UUIDModel):
+    fiscal_year = models.ForeignKey(FiscalYear, on_delete=models.PROTECT, related_name="periods")
+    name = models.CharField(max_length=32)
+    starts_on = models.DateField()
+    ends_on = models.DateField()
+    status = models.CharField(max_length=16, default="open")
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["fiscal_year", "starts_on"], name="one_period_start_per_year")]
+
+
+class JournalStatus(models.TextChoices):
+    DRAFT = "draft", "Draft"
+    POSTED = "posted", "Posted"
 
 
 class JournalEntry(UUIDModel):
@@ -41,6 +71,8 @@ class JournalEntry(UUIDModel):
     memo = models.CharField(max_length=240)
     invoice = models.ForeignKey(ClientInvoice, null=True, blank=True, on_delete=models.PROTECT, related_name="journals")
     reverses = models.ForeignKey("self", null=True, blank=True, on_delete=models.PROTECT, related_name="reversals")
+    period = models.ForeignKey(AccountingPeriod, null=True, blank=True, on_delete=models.PROTECT, related_name="journals")
+    status = models.CharField(max_length=16, choices=JournalStatus.choices, default=JournalStatus.POSTED)
     is_demo = models.BooleanField(default=False)
 
 

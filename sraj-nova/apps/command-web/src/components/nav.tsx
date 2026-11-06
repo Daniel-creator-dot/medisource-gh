@@ -2,19 +2,32 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  BookOpen,
+  Building2,
+  CalendarClock,
+  Factory,
+  KeyRound,
+  Landmark,
+  LayoutDashboard,
+  ListChecks,
+  UserRound,
+  Users,
+  Wallet,
+} from "lucide-react";
 
 const links = [
-  { href: "/command", label: "Command" },
-  { href: "/work", label: "Actions" },
-  { href: "/floor", label: "Floor" },
-  { href: "/deployment", label: "Coverage" },
-  { href: "/employees", label: "People" },
-  { href: "/finance", label: "Finance" },
-  { href: "/accounting", label: "Books" },
-  { href: "/clients", label: "Clients" },
-  { href: "/agency", label: "Agency" },
-  { href: "/access", label: "Access" },
-  { href: "/me", label: "My record" },
+  { href: "/command", label: "Command", icon: LayoutDashboard },
+  { href: "/work", label: "Actions", icon: ListChecks },
+  { href: "/floor", label: "Floor", icon: Factory },
+  { href: "/deployment", label: "Coverage", icon: CalendarClock },
+  { href: "/employees", label: "People", icon: Users },
+  { href: "/finance", label: "Finance", icon: Wallet },
+  { href: "/accounting", label: "Books", icon: BookOpen },
+  { href: "/clients", label: "Clients", icon: Building2 },
+  { href: "/agency", label: "Agency", icon: Landmark },
+  { href: "/access", label: "Access", icon: KeyRound },
+  { href: "/me", label: "My record", icon: UserRound },
 ];
 
 export function Nav() {
@@ -23,8 +36,10 @@ export function Nav() {
     <nav>
       {links.map((link) => {
         const active = path === link.href || path.startsWith(`${link.href}/`);
+        const Icon = link.icon;
         return (
           <Link key={link.href} href={link.href} data-active={active ? "true" : "false"}>
+            <Icon aria-hidden="true" size={18} />
             {link.label}
           </Link>
         );

@@ -1,29 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  --header: #16130f;
-  --ink: #1a1714;
-  --canvas: #f3efe8;
-  --card: #fffcf8;
-  --line: #e4dcd0;
-  --muted: #6f675e;
-  --orange: #c45c26;
-  --shadow: 0 18px 50px rgba(42, 28, 16, 0.08);
+  --header: #071426;
+  --navy: #071426;
+  --blue: #2f6bff;
+  --ink: #122033;
+  --canvas: #e8eef8;
+  --card: #ffffff;
+  --card-solid: #ffffff;
+  --line: #e6ebf4;
+  --muted: #7b8798;
+  --orange: #e36a1e;
+  --shadow: 0 12px 32px rgba(36, 62, 110, 0.06);
 }
 
 [data-theme="dark"] {
-  --ink: #f6f1ea;
-  --canvas: #100e0c;
-  --card: #1c1814;
-  --line: #3a322a;
-  --muted: #b7aa9c;
-  --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  --ink: #e8eef6;
+  --canvas: #071018;
+  --card: rgba(14, 27, 43, 0.82);
+  --card-solid: #101c2c;
+  --line: #243246;
+  --muted: #9aafc4;
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
 }
 
 body {
-  background:
-    radial-gradient(800px 400px at 0% 0%, rgba(196, 92, 38, 0.14), transparent 55%),
-    var(--canvas);
+  background: var(--canvas);
   color: var(--ink);
   font-family: var(--font-sans), "Segoe UI", sans-serif;
 }
@@ -36,35 +38,53 @@ body {
 .app-shell {
   display: grid;
   min-height: 100vh;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 232px 1fr;
+  gap: 1rem;
+  padding: 1rem;
 }
 
 .rail {
   position: sticky;
-  top: 0;
+  top: 1rem;
   display: flex;
-  height: 100vh;
+  height: calc(100vh - 2rem);
   flex-direction: column;
-  gap: 1.25rem;
-  border-right: 1px solid var(--line);
-  background: #16130f;
-  color: white;
-  padding: 1.25rem 0.9rem;
+  gap: 1rem;
+  border-radius: 28px;
+  background: var(--card-solid);
+  color: var(--ink);
+  padding: 1.25rem 0.85rem;
+  box-shadow: var(--shadow);
 }
 
 .rail nav {
   display: grid;
-  gap: 0.2rem;
+  gap: 0.15rem;
 }
 
-.rail a {
-  border-radius: 12px;
-  padding: 0.55rem 0.75rem;
-  color: rgba(255, 255, 255, 0.72);
+.rail nav a {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  border-radius: 14px;
+  padding: 0.62rem 0.75rem;
+  color: #5d6b80;
+  font-size: 0.92rem;
+  font-weight: 600;
+  transition: background 160ms ease, color 160ms ease;
 }
 
-.rail a[data-active="true"] {
-  background: rgba(255, 255, 255, 0.1);
+.rail nav a[data-active="true"] {
+  background: #eef3ff;
+  color: var(--blue);
+}
+
+[data-theme="dark"] .rail nav a {
+  color: rgba(232, 238, 246, 0.72);
+}
+
+[data-theme="dark"] .rail nav a[data-active="true"] {
+  background: rgba(47, 107, 255, 0.22);
   color: white;
 }
 
@@ -72,12 +92,39 @@ body {
   min-width: 0;
 }
 
-.banner {
-  border-bottom: 1px solid var(--line);
-  background: var(--card);
-  padding: 0.55rem 1.25rem;
-  font-size: 0.82rem;
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.search {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  background: var(--card-solid);
+  padding: 0.7rem 1rem;
+  box-shadow: var(--shadow);
   color: var(--muted);
+}
+
+.search input {
+  width: 100%;
+  background: transparent;
+  outline: none;
+}
+
+.dash {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 1rem;
+}
+
+@media (max-width: 1100px) {
+  .dash { grid-template-columns: 1fr; }
 }
 
 .lane {
@@ -89,7 +136,7 @@ body {
     repeating-linear-gradient(90deg, transparent 0, transparent calc(12.5% - 1px), rgba(26, 23, 20, 0.08) 12.5%);
 }
 
-.block {
+.shift-block {
   position: absolute;
   top: 8px;
   height: 42px;
@@ -101,13 +148,13 @@ body {
   line-height: 1.15;
 }
 
-.block.on_duty,
-.block.present { background: #1f6b45; }
-.block.late,
-.block.gap { background: #c45c26; }
-.block.absent,
-.block.unfilled { background: #8d2d24; }
-.block.scheduled { background: #3d4c5c; }
+.shift-block.on_duty,
+.shift-block.present { background: #1f6b45; }
+.shift-block.late,
+.shift-block.gap { background: #c45c26; }
+.shift-block.absent,
+.shift-block.unfilled { background: #8d2d24; }
+.shift-block.scheduled { background: #3d4c5c; }
 
 @media (max-width: 900px) {
   .app-shell { grid-template-columns: 1fr; }
@@ -123,41 +170,40 @@ body {
 }
 
 .panel {
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 80px),
-    var(--card);
+  border: 0;
+  border-radius: 24px;
+  background: var(--card-solid);
   box-shadow: var(--shadow);
 }
 
 .metric {
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  background: var(--card);
+  border: 0;
+  border-radius: 24px;
+  background: var(--card-solid);
   box-shadow: var(--shadow);
-  padding: 1rem 1.1rem 1rem 1.25rem;
+  padding: 1rem 1.15rem;
 }
 
 .metric::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 5px;
-  background: var(--header);
+  content: none;
 }
 
 .metric.alert::before {
   background: var(--orange);
 }
 
+.metric.alert strong {
+  font-size: 1.45rem;
+  line-height: 1.15;
+}
+
 .metric strong {
   display: block;
   margin-top: 0.45rem;
   font-family: var(--font-display), "Segoe UI", sans-serif;
-  font-size: 2.4rem;
+  font-size: 1.85rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1;
@@ -166,8 +212,8 @@ body {
 .gauge {
   border-radius: 24px;
   background:
-    linear-gradient(160deg, rgba(227, 106, 30, 0.22), transparent 42%),
-    #0b1f33;
+    linear-gradient(160deg, rgba(47, 107, 255, 0.45), transparent 46%),
+    var(--navy);
   color: white;
   padding: 1.1rem 1.2rem 1.2rem;
   box-shadow: 0 18px 40px rgba(11, 31, 51, 0.18);
@@ -199,14 +245,14 @@ body {
   height: 8px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(11, 31, 51, 0.08);
+  background: rgba(7, 20, 38, 0.08);
 }
 
 .bar i {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #0b1f33, #e36a1e);
+  background: linear-gradient(90deg, var(--blue), var(--orange));
 }
 
 .shift {
@@ -251,7 +297,32 @@ body {
 
 a:focus-visible,
 button:focus-visible,
-input:focus-visible {
-  outline: 2px solid var(--orange);
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--blue);
   outline-offset: 2px;
+}
+
+.night {
+  background:
+    radial-gradient(700px 320px at 0% 0%, rgba(47, 107, 255, 0.35), transparent 60%),
+    var(--navy);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .panel,
+  .metric,
+  .sheet {
+    backdrop-filter: none;
+    background: var(--card-solid);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
