@@ -16,7 +16,10 @@ def ensure_schema() -> None:
     if connection.vendor != "postgresql":
         return
     with connection.cursor() as cursor:
-        cursor.execute("CREATE SCHEMA IF NOT EXISTS nova")
+        cursor.execute("SELECT 1 FROM pg_namespace WHERE nspname = %s", ["nova"])
+        if cursor.fetchone():
+            return
+        cursor.execute("CREATE SCHEMA nova")
 
 
 def prepare() -> None:
