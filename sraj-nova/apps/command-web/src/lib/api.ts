@@ -1,11 +1,12 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 const api = process.env.API_URL || "http://127.0.0.1:8010";
 
 export type ApiResult<T> = { status: number; data: T | null; message: string | null };
 
-export async function apiGet<T>(path: string): Promise<ApiResult<T>> {
+export const apiGet = cache(async function apiGet<T>(path: string): Promise<ApiResult<T>> {
   const jar = await cookies();
   let response: Response;
   try {
@@ -25,4 +26,4 @@ export async function apiGet<T>(path: string): Promise<ApiResult<T>> {
   } catch {
     return { status: response.status, data: null, message: "The API returned a page instead of data." };
   }
-}
+});

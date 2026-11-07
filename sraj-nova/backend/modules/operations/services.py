@@ -28,10 +28,25 @@ def scoped_employees(user):
     return Employee.objects.none()
 
 
-def _attendance_state(employee_id, work_date, starts_at) -> str:
-    events = list(
-        AttendanceEvent.objects.filter(employee_id=employee_id, occurred_at__date=work_date).order_by("occurred_at")
-    )
+def _events_by_worker_day(employee_ids, start, end):
+    grouped: dict[tuple, list] = {}
+    ids = {employee_id for employee_id in employee_ids if employee_id}
+    if not ids:
+        return grouped
+    events = AttendanceEvent.objects.filter(
+        employee_id__in=ids,
+        occurred_at__date__gte=start,
+        occurred_at__date__lte=end,
+    ).order_by("occurred_at")
+    for event in events:
+        day = timezone.localtime(event.occurred_at).date()
+        grouped.setdefault((event.employee_id, day), []).append(event)
+    return grouped
+
+
+def _state_from(events, work_date, starts_at) -> str:
+    if not events:
+        return "absent"
     first_in = next((event for event in events if event.event_type == "in"), None)
     if first_in is None:
         return "absent"
@@ -43,13 +58,19 @@ def _attendance_state(employee_id, work_date, starts_at) -> str:
     return "present"
 
 
+def _attendance_state(employee_id, work_date, starts_at) -> str:
+    events = _events_by_worker_day([employee_id], work_date, work_date).get((employee_id, work_date), [])
+    return _state_from(events, work_date, starts_at)
+
+
 def command_center(user) -> dict:
     clients = scoped_clients(user)
     today = timezone.localdate()
     deployments = Deployment.objects.filter(is_current=True, client__in=clients)
-    shifts = ShiftAssignment.objects.filter(work_date=today, client__in=clients)
-    scheduled = shifts.exclude(employee__isnull=True)
-    states = [_attendance_state(shift.employee_id, today, shift.starts_at) for shift in scheduled]
+    shift_rows = list(ShiftAssignment.objects.filter(work_date=today, client__in=clients))
+    scheduled = [shift for shift in shift_rows if shift.employee_id]
+    attendance = _events_by_worker_day((shift.employee_id for shift in scheduled), today, today)
+    states = [_state_from(attendance.get((shift.employee_id, today), []), today, shift.starts_at) for shift in scheduled]
     per_client = list(
         deployments.values("client_id", "client__legal_name").annotate(workers=Count("id")).order_by("client__legal_name")
     )
@@ -65,11 +86,11 @@ def command_center(user) -> dict:
             {"client_id": str(row["client_id"]), "client_name": row["client__legal_name"], "workers": row["workers"]}
             for row in per_client
         ],
-        "scheduled_today": scheduled.count(),
+        "scheduled_today": len(scheduled),
         "on_duty": states.count("on_duty"),
         "late": states.count("late"),
         "absent": states.count("absent"),
-        "unfilled_shifts": shifts.filter(employee__isnull=True).count(),
+        "unfilled_shifts": sum(1 for shift in shift_rows if shift.employee_id is None),
         "pending_staffing_requests": StaffingRequest.objects.filter(status="pending", client__in=clients).count(),
         "expiring_contracts": ServiceContract.objects.filter(client__in=clients, ends_on__gte=today, ends_on__lte=horizon).count(),
         "open_alerts": [
@@ -85,7 +106,6 @@ def _executive_board(user, clients, today) -> dict:
     """Series for the command center. Every amount is a stored invoice, shift, or journal."""
     from decimal import Decimal
 
-    from modules.finance.ledger import invoice_outstanding
     from modules.finance.models import ClientInvoice, ClientReceipt, JournalEntry
     from modules.finance.services import money, money_str
 
@@ -96,12 +116,13 @@ def _executive_board(user, clients, today) -> dict:
             "client", "site"
         )
     )
+    attendance = _events_by_worker_day((shift.employee_id for shift in week_shifts), start, days[-1])
     attendance_week = []
     for day in days:
         day_shifts = [shift for shift in week_shifts if shift.work_date == day]
         filled = [shift for shift in day_shifts if shift.employee_id]
         future = day > today
-        states = [] if future else [_attendance_state(shift.employee_id, day, shift.starts_at) for shift in filled]
+        states = [] if future else [_state_from(attendance.get((shift.employee_id, day), []), day, shift.starts_at) for shift in filled]
         attendance_week.append(
             {
                 "date": day.isoformat(),
@@ -121,12 +142,15 @@ def _executive_board(user, clients, today) -> dict:
         cells = heatmap.setdefault(label, {day.isoformat(): {"filled": 0, "unfilled": 0} for day in days})
         bucket = "filled" if shift.employee_id else "unfilled"
         cells[shift.work_date.isoformat()][bucket] += 1
-    invoices = list(ClientInvoice.objects.filter(client__in=clients).select_related("client").order_by("week_start", "client__legal_name"))
+    invoices = list(
+        ClientInvoice.objects.filter(client__in=clients).select_related("client").prefetch_related("receipts").order_by("week_start", "client__legal_name")
+    )
     weeks = {}
     current_clients = []
     unpaid = []
     for invoice in invoices:
-        outstanding = invoice_outstanding(invoice)
+        paid = sum((receipt.amount for receipt in invoice.receipts.all()), Decimal("0.00"))
+        outstanding = money(invoice.total - paid)
         week = weeks.setdefault(
             invoice.week_start.isoformat(),
             {"week_start": invoice.week_start.isoformat(), "employment_cost": Decimal("0.00"), "agency_fee": Decimal("0.00"), "outstanding": Decimal("0.00")},
@@ -219,13 +243,16 @@ def factory_floor(user) -> dict:
     agency = user.role in AGENCY_ROLES
     shifts = (
         ShiftAssignment.objects.filter(work_date__gte=start, work_date__lte=end, client__in=clients)
-        .select_related("client", "site", "department", "position", "employee")
+        .select_related("client", "site", "department", "position", "employee__pay_profile")
         .order_by("work_date", "site__name", "starts_at")
     )
+    shift_list = list(shifts)
+    events = _events_by_worker_day((shift.employee_id for shift in shift_list), start, end)
     qualified = set(Qualification.objects.filter(employee__in=employees).values_list("employee_id", "skill"))
     rows = []
-    for shift in shifts:
+    for shift in shift_list:
         skill = shift.position.required_skill
+        punch = events.get((shift.employee_id, shift.work_date), [])
         if shift.employee_id is None:
             cover = "open" if skill else "not_required"
             attendance = "unfilled"
@@ -239,13 +266,13 @@ def factory_floor(user) -> dict:
             attendance = "scheduled"
         elif not skill:
             cover = "not_required"
-            attendance = _attendance_state(shift.employee_id, today if shift.work_date == today else shift.work_date, shift.starts_at)
+            attendance = _state_from(punch, shift.work_date, shift.starts_at)
         elif (shift.employee_id, skill) in qualified:
             cover = "covered"
-            attendance = _attendance_state(shift.employee_id, shift.work_date, shift.starts_at)
+            attendance = _state_from(punch, shift.work_date, shift.starts_at)
         else:
             cover = "gap"
-            attendance = _attendance_state(shift.employee_id, shift.work_date, shift.starts_at)
+            attendance = _state_from(punch, shift.work_date, shift.starts_at)
         row = {
             "id": str(shift.id),
             "work_date": shift.work_date.isoformat(),
@@ -314,6 +341,7 @@ def department_board(user) -> dict:
     shifts = list(
         ShiftAssignment.objects.filter(work_date=today, client__in=clients).select_related("department", "position", "employee")
     )
+    events = _events_by_worker_day((shift.employee_id for shift in shifts), today, today)
     deployments = list(
         Deployment.objects.filter(is_current=True, client__in=clients).select_related("department", "position", "employee")
     )
@@ -350,7 +378,7 @@ def department_board(user) -> dict:
                         }
                     )
                     continue
-                state = _attendance_state(shift.employee_id, today, shift.starts_at)
+                state = _state_from(events.get((shift.employee_id, today), []), today, shift.starts_at)
                 if state == "on_duty":
                     on_duty += 1
                 elif state == "late":

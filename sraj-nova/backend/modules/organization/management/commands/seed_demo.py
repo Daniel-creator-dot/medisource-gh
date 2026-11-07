@@ -40,8 +40,13 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if not settings.DEBUG and not settings.FORCE_SEED_DEMO:
             raise CommandError("Refusing to seed demonstration data while DEBUG is false.")
+        today = timezone.localdate()
+        if Agency.objects.filter(legal_name="SRAJ NOVA Ltd", seeded_on=today).exists():
+            self.stdout.write("Demonstration data is already loaded for today.")
+            return
         with transaction.atomic():
             self._load()
+            Agency.objects.filter(legal_name="SRAJ NOVA Ltd").update(seeded_on=today)
         self.stdout.write(self.style.WARNING(DEMO))
         self.stdout.write(f"Demonstration password: {PASSWORD}")
 

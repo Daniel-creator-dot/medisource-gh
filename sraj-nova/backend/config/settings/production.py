@@ -17,6 +17,8 @@ if render_host and render_host not in ALLOWED_HOSTS:
 # The Render database already contains the earlier marketplace schema.
 # Keep this application's tables in their own schema.
 if "postgresql" in DATABASES["default"]["ENGINE"]:
+    DATABASES["default"]["CONN_MAX_AGE"] = 60
+    DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
     database_options = DATABASES["default"].setdefault("OPTIONS", {})
     database_options["options"] = "-c search_path=nova"
 

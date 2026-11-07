@@ -42,8 +42,12 @@ def main() -> None:
         "config.wsgi:application",
         "--bind",
         f"0.0.0.0:{port}",
+        "--worker-class",
+        "gthread",
         "--workers",
         "1",
+        "--threads",
+        "4",
         "--timeout",
         "120",
     ]

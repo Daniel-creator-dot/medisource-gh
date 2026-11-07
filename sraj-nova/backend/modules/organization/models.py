@@ -11,6 +11,7 @@ class Agency(UUIDModel):
     country = models.CharField(max_length=2, default="GH")
     currency = models.CharField(max_length=3, default="GHS")
     timezone = models.CharField(max_length=64, default="Africa/Accra")
+    seeded_on = models.DateField(null=True, blank=True)
 
     def __str__(self) -> str:
         return self.trading_name
