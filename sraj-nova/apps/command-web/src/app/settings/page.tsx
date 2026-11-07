@@ -14,6 +14,7 @@ type Settings = {
   late_grace_minutes: number;
   min_rest_hours: number;
   can_manage_roles: boolean;
+  can_manage_hr: boolean;
 };
 
 export default async function SettingsPage() {
@@ -31,6 +32,14 @@ export default async function SettingsPage() {
     <Shell>
       <p className="text-sm font-semibold tracking-[0.14em] text-[var(--muted)]">ACCOUNT</p>
       <h1 className="display mt-1 text-4xl font-bold">Settings</h1>
+      <nav className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Link className="panel p-4" href="/settings"><p className="text-sm text-[var(--muted)]">Account</p><p className="mt-1 font-semibold">Password and sign-in</p></Link>
+        <Link className="panel p-4" href="/access"><p className="text-sm text-[var(--muted)]">Roles</p><p className="mt-1 font-semibold">Who can open which screens</p></Link>
+        {settings.can_manage_hr ? <Link className="panel p-4" href="/hr"><p className="text-sm text-[var(--muted)]">HR</p><p className="mt-1 font-semibold">Add staff to a department</p></Link> : null}
+        {settings.can_manage_hr ? <Link className="panel p-4" href="/recruitment"><p className="text-sm text-[var(--muted)]">Recruitment</p><p className="mt-1 font-semibold">Applications and hiring</p></Link> : null}
+        <Link className="panel p-4" href="/settings/tax"><p className="text-sm text-[var(--muted)]">Tax</p><p className="mt-1 font-semibold">PAYE and pension status</p></Link>
+        <Link className="panel p-4" href="/settings"><p className="text-sm text-[var(--muted)]">Attendance</p><p className="mt-1 font-semibold">Late mark and rest hours</p></Link>
+      </nav>
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         <article className="panel p-5">
           <h2 className="text-lg font-semibold">{settings.name}</h2>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpen,
+  Briefcase,
   Building2,
   CalendarClock,
   Factory,
@@ -11,6 +12,7 @@ import {
   Layers,
   Landmark,
   LayoutDashboard,
+  UserPlus,
   ListChecks,
   Settings,
   UserRound,
@@ -42,6 +44,8 @@ const groups = [
   {
     label: "Records",
     links: [
+      { href: "/hr", label: "HR", icon: UserPlus, roles: agency },
+      { href: "/recruitment", label: "Recruitment", icon: Briefcase, roles: agency },
       { href: "/employees", label: "People", icon: Users, roles: plant },
       { href: "/clients", label: "Clients", icon: Building2, roles: plant },
       { href: "/agency", label: "Agency", icon: Landmark, roles: agency },

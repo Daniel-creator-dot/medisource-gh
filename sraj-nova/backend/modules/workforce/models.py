@@ -109,6 +109,31 @@ class RecruitmentEvent(UUIDModel):
     occurred_on = models.DateField()
 
 
+class ApplicantStatus(models.TextChoices):
+    APPLIED = "applied", "Applied"
+    SCREENING = "screening", "Screening"
+    OFFERED = "offered", "Offered"
+    HIRED = "hired", "Hired"
+    REJECTED = "rejected", "Rejected"
+
+
+class Applicant(UUIDModel):
+    first_name = models.CharField(max_length=80)
+    last_name = models.CharField(max_length=80)
+    phone = models.CharField(max_length=40, blank=True)
+    skill = models.CharField(max_length=80, blank=True)
+    site = models.ForeignKey("organization.ClientSite", on_delete=models.PROTECT, related_name="applicants")
+    department = models.ForeignKey("organization.Department", on_delete=models.PROTECT, related_name="applicants")
+    position = models.ForeignKey("organization.JobPosition", on_delete=models.PROTECT, related_name="applicants")
+    status = models.CharField(max_length=16, choices=ApplicantStatus.choices, default=ApplicantStatus.APPLIED)
+    note = models.CharField(max_length=240, blank=True)
+    hired_employee = models.ForeignKey(Employee, null=True, blank=True, on_delete=models.PROTECT, related_name="application")
+    is_demo = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
 class HrNote(UUIDModel):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="hr_notes")
     visibility = models.CharField(max_length=16, default="standard")

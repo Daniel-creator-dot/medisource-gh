@@ -15,6 +15,8 @@ from modules.identity.models import AgencyRole, User
 from modules.operations.models import AttendanceEvent, OperationalAlert, ShiftAssignment, StaffingRequest
 from modules.organization.models import Agency, Client, ClientSite, Department, JobPosition, ServiceContract
 from modules.workforce.models import (
+    Applicant,
+    ApplicantStatus,
     Certification,
     Deployment,
     Employee,
@@ -174,6 +176,20 @@ class Command(BaseCommand):
             alert.message = "Sample afternoon shift in Mechanical has no assigned fitter."
             alert.is_open = True
             alert.save()
+        Applicant.objects.get_or_create(
+            first_name="Kojo",
+            last_name="Nyarko",
+            is_demo=True,
+            defaults={
+                "phone": "",
+                "skill": "packing",
+                "site": ashanti_site,
+                "department": ashanti_departments["Packing"],
+                "position": packer,
+                "status": ApplicantStatus.APPLIED,
+                "note": "Sample application for the packing department. Not a real person.",
+            },
+        )
         for site in (ashanti_site, takoradi_site):
             for name in ("Weaving", "Dispatch"):
                 stale = Department.objects.filter(site=site, name=name).first()

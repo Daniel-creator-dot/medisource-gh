@@ -26,6 +26,24 @@ def _agency(user):
         raise PermissionDenied()
 
 
+class TaxSettingsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return ok(
+            {
+                "statutory_engine": "not_active",
+                "net_pay": None,
+                "items": [
+                    {"name": "PAYE", "status": "not_configured", "amount": None},
+                    {"name": "SSNIT", "status": "not_configured", "amount": None},
+                    {"name": "Tier 2 pension", "status": "not_configured", "amount": None},
+                ],
+                "note": "No Ghana tax or pension rate is stored. Net pay is not calculated.",
+            }
+        )
+
+
 class FinanceView(APIView):
     permission_classes = [IsAuthenticated]
 

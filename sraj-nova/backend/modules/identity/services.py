@@ -58,11 +58,11 @@ ROLE_LABELS = {
 }
 
 ROLE_OPENS = {
-    AgencyRole.AGENCY_OWNER: ["Command", "Departments", "Floor", "Actions", "Coverage", "People", "Clients", "Finance", "Books", "Agency", "Roles", "Settings"],
-    AgencyRole.AGENCY_OPERATIONS: ["Command", "Departments", "Floor", "Actions", "Coverage", "People", "Clients", "Finance", "Books", "Agency", "Settings"],
-    AgencyRole.AGENCY_FINANCE: ["Command", "Departments", "Floor", "Actions", "Coverage", "People", "Clients", "Finance", "Books", "Agency", "Settings"],
-    AgencyRole.CLIENT_USER: ["Command", "Departments", "Floor", "Actions", "Coverage", "People", "Clients", "Finance", "Settings"],
-    AgencyRole.EMPLOYEE: ["My record", "Settings"],
+    AgencyRole.AGENCY_OWNER: ["Command", "Departments", "Floor", "Actions", "Coverage", "HR", "Recruitment", "People", "Clients", "Finance", "Books", "Tax", "Agency", "Roles", "Settings"],
+    AgencyRole.AGENCY_OPERATIONS: ["Command", "Departments", "Floor", "Actions", "Coverage", "HR", "Recruitment", "People", "Clients", "Finance", "Books", "Tax", "Agency", "Settings"],
+    AgencyRole.AGENCY_FINANCE: ["Command", "Departments", "Floor", "Actions", "Coverage", "HR", "Recruitment", "People", "Clients", "Finance", "Books", "Tax", "Agency", "Settings"],
+    AgencyRole.CLIENT_USER: ["Command", "Departments", "Floor", "Actions", "Coverage", "People", "Clients", "Finance", "Tax", "Settings"],
+    AgencyRole.EMPLOYEE: ["My record", "Tax", "Settings"],
 }
 
 
@@ -116,4 +116,5 @@ def account_settings(user: User) -> dict:
         "late_grace_minutes": settings.LATE_GRACE_MINUTES,
         "min_rest_hours": settings.MIN_REST_HOURS,
         "can_manage_roles": user.role == AgencyRole.AGENCY_OWNER,
+        "can_manage_hr": user.role in {AgencyRole.AGENCY_OWNER, AgencyRole.AGENCY_OPERATIONS, AgencyRole.AGENCY_FINANCE},
     }

@@ -10,11 +10,13 @@ from modules.finance.views import (
     PostWeekView,
     ReceiptView,
     RebuildInvoicesView,
+    TaxSettingsView,
     ReverseJournalView,
 )
 
 urlpatterns = [
     path("finance/", FinanceView.as_view(), name="finance"),
+    path("settings/tax/", TaxSettingsView.as_view(), name="tax-settings"),
     path("finance/worksheets/rebuild/", RebuildInvoicesView.as_view(), name="finance-rebuild"),
     path("accounting/", BooksView.as_view(), name="books"),
     path("accounting/position/", LedgerPositionView.as_view(), name="ledger-position"),
