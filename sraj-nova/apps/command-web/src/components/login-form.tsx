@@ -17,7 +17,7 @@ type FormValues = z.infer<typeof schema>;
 
 async function fetchApi(path: string, init?: RequestInit) {
   try {
-    return await fetch(path, { ...init, signal: AbortSignal.timeout(20000) });
+    return await fetch(path, { ...init, signal: AbortSignal.timeout(70000) });
   } catch {
     throw new Error("The API did not answer. Wait a moment and try again.");
   }

@@ -36,23 +36,19 @@ type Center = {
     net_profitability: null;
     net_profitability_reason: string;
     statutory_note: string;
+    timeline: {
+      id: string;
+      site_name: string;
+      position: string;
+      worker_name: string | null;
+      starts_at: string;
+      ends_at: string;
+      attendance: string;
+      work_date: string;
+      is_today: boolean;
+    }[];
+    certifications: { employee_id: string; worker_name: string; name: string; expires_on: string; state: string }[];
   };
-};
-
-type FloorSlice = {
-  as_of: string;
-  shifts: {
-    id: string;
-    site_name: string;
-    position: string;
-    worker_name: string | null;
-    starts_at: string;
-    ends_at: string;
-    attendance: string;
-    work_date: string;
-    is_today: boolean;
-  }[];
-  certifications: { employee_id: string; worker_name: string; name: string; expires_on: string; state: string }[];
 };
 
 function WeekChart({ days }: { days: Center["board"]["attendance_week"] }) {
@@ -106,10 +102,7 @@ function blockStyle(start: string, end: string) {
 }
 
 export default async function CommandPage() {
-  const [result, floorResult] = await Promise.all([
-    apiGet<Center>("/command-center/"),
-    apiGet<FloorSlice>("/factory-floor/"),
-  ]);
+  const result = await apiGet<Center>("/command-center/");
   if (result.status === 403) {
     return (
       <>
@@ -120,9 +113,8 @@ export default async function CommandPage() {
   }
   const data = result.data;
   if (!data) return null;
-  const floor = floorResult.data;
-  const shifts = floor?.shifts ?? [];
-  const focus = shifts.some((shift) => shift.is_today) ? floor?.as_of : shifts.at(-1)?.work_date;
+  const shifts = data.board.timeline;
+  const focus = shifts.some((shift) => shift.is_today) ? data.as_of : shifts.at(-1)?.work_date;
   const lanes = [...new Set(shifts.filter((shift) => shift.work_date === focus).map((shift) => `${shift.site_name} · ${shift.position} · ${shift.worker_name ?? "Unfilled"}`))];
   const peak = Math.max(...data.workers_by_client.map((item) => item.workers), 1);
   const wagePeak = Math.max(...data.board.invoice_weeks.map((week) => Number(week.employment_cost) + Number(week.agency_fee)), 1);
@@ -323,7 +315,7 @@ export default async function CommandPage() {
         <article className="panel p-4">
           <h2 className="text-lg font-semibold">Certifications and statutory</h2>
           <ul className="mt-3 space-y-2 text-sm">
-            {(floor?.certifications ?? []).length === 0 ? <li className="text-[var(--muted)]">No certification expires within 60 days.</li> : floor?.certifications.map((item) => (
+            {data.board.certifications.length === 0 ? <li className="text-[var(--muted)]">No certification expires within 60 days.</li> : data.board.certifications.map((item) => (
               <li key={`${item.employee_id}-${item.name}`} className="rounded-xl bg-[var(--canvas)] px-3 py-2">
                 <Link href={`/employees/${item.employee_id}`}>{item.worker_name} · {item.name} · {item.state} {item.expires_on}</Link>
               </li>

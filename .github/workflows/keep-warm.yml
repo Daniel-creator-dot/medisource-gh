@@ -1,0 +1,15 @@
+name: Keep the workforce site awake
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake the web and the API together
+        run: |
+          curl --max-time 90 --retry 2 --retry-delay 5 -sS -o /dev/null "https://medisource-gh-web.onrender.com/" || true
+          curl --max-time 90 --retry 2 --retry-delay 5 -sS -o /dev/null "https://medisource-gh-api.onrender.com/api/v1/health/" || true

@@ -75,6 +75,9 @@ def command_center(user) -> dict:
         deployments.values("client_id", "client__legal_name").annotate(workers=Count("id")).order_by("client__legal_name")
     )
     horizon = today + timedelta(days=30)
+    board = _executive_board(user, clients, today)
+    week_start = (today - timedelta(days=today.weekday())).isoformat()
+    this_week = next((row for row in board["invoice_weeks"] if row["week_start"] == week_start), None)
     return {
         "as_of": today.isoformat(),
         "scope": "agency" if user.role in AGENCY_ROLES else "client",
@@ -97,8 +100,8 @@ def command_center(user) -> dict:
             {"severity": alert.severity, "message": alert.message}
             for alert in OperationalAlert.objects.filter(is_open=True, client__in=clients).order_by("-created_at")[:8]
         ],
-        "finance": _finance_block(user),
-        "board": _executive_board(user, clients, today),
+        "board": board,
+        "finance": _finance_block(user, this_week),
     }
 
 
@@ -113,7 +116,7 @@ def _executive_board(user, clients, today) -> dict:
     days = [start + timedelta(days=offset) for offset in range(7)]
     week_shifts = list(
         ShiftAssignment.objects.filter(work_date__gte=start, work_date__lte=days[-1], client__in=clients).select_related(
-            "client", "site"
+            "client", "site", "position", "employee"
         )
     )
     attendance = _events_by_worker_day((shift.employee_id for shift in week_shifts), start, days[-1])
@@ -227,7 +230,47 @@ def _executive_board(user, clients, today) -> dict:
         "net_profitability": None,
         "net_profitability_reason": "Fee revenue is not profit. Wage expense, PAYE, and pension are not posted.",
         "statutory_note": "No statutory obligation is stored.",
+        "timeline": [_timeline_row(shift, attendance, today) for shift in week_shifts],
+        "certifications": _expiring_certifications(user, today),
     }
+
+
+def _timeline_row(shift, attendance, today) -> dict:
+    if shift.employee_id is None:
+        state = "unfilled"
+    elif shift.work_date > today:
+        state = "scheduled"
+    else:
+        state = _state_from(attendance.get((shift.employee_id, shift.work_date), []), shift.work_date, shift.starts_at)
+    return {
+        "id": str(shift.id),
+        "work_date": shift.work_date.isoformat(),
+        "is_today": shift.work_date == today,
+        "site_name": shift.site.name,
+        "position": shift.position.title,
+        "worker_name": f"{shift.employee.first_name} {shift.employee.last_name}" if shift.employee_id else None,
+        "starts_at": shift.starts_at.strftime("%H:%M"),
+        "ends_at": shift.ends_at.strftime("%H:%M"),
+        "attendance": state,
+    }
+
+
+def _expiring_certifications(user, today) -> list[dict]:
+    from modules.workforce.models import Certification
+
+    horizon = today + timedelta(days=60)
+    return [
+        {
+            "employee_id": str(item.employee_id),
+            "worker_name": f"{item.employee.first_name} {item.employee.last_name}",
+            "name": item.name,
+            "expires_on": item.expires_on.isoformat(),
+            "state": "expired" if item.expires_on < today else "due",
+        }
+        for item in Certification.objects.filter(employee__in=scoped_employees(user), expires_on__isnull=False, expires_on__lte=horizon)
+        .select_related("employee")
+        .order_by("expires_on")
+    ]
 
 
 def factory_floor(user) -> dict:
@@ -440,21 +483,26 @@ def department_board(user) -> dict:
     }
 
 
-def _finance_block(user) -> dict:
-    from modules.finance.services import finance_summary
+def _finance_block(user, week_row) -> dict:
+    from django.db.models import Sum
 
-    summary = finance_summary(user)
+    from modules.finance.ledger import cash_balance
+    from modules.finance.models import CashMovement
+    from modules.finance.services import BASIS, money_str
+
     block = {
         "payroll_engine": "scheduled_hours_x_rate",
         "billing_engine": "cost_plus_fee",
         "statutory_engine": "not_active",
-        "weekly_gross_payroll": summary["weekly_gross_payroll"],
+        "weekly_gross_payroll": week_row["employment_cost"] if week_row else "0.00",
         "estimated_net_payroll": None,
         "statutory_liabilities": None,
-        "outstanding_invoices": summary["outstanding_invoices"],
-        "agency_fee_revenue": summary["agency_fee"],
-        "reason": summary["basis"],
+        "outstanding_invoices": week_row["outstanding"] if week_row else "0.00",
+        "agency_fee_revenue": week_row["agency_fee"] if week_row else "0.00",
+        "reason": BASIS,
     }
-    if "cash_available" in summary:
-        block["cash_available"] = summary["cash_available"]
+    if user.role in AGENCY_ROLES:
+        ledger_cash = cash_balance()
+        cash = ledger_cash if ledger_cash is not None else (CashMovement.objects.aggregate(total=Sum("amount"))["total"] or 0)
+        block["cash_available"] = money_str(cash)
     return block

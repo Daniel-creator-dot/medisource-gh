@@ -22,14 +22,39 @@ def ensure_schema() -> None:
         cursor.execute("CREATE SCHEMA nova")
 
 
+def _service_is_ready() -> bool:
+    """True when this process can serve without a migration or a same-day reload."""
+    from django.db import connection
+    from django.db.migrations.loader import MigrationLoader
+    from django.utils import timezone
+
+    from modules.organization.models import Agency
+
+    loader = MigrationLoader(connection)
+    if not set(loader.graph.leaf_nodes()).issubset(loader.applied_migrations):
+        return False
+    return Agency.objects.filter(legal_name="SRAJ NOVA Ltd", seeded_on=timezone.localdate()).exists()
+
+
 def prepare() -> None:
     ensure_schema()
-    for _ in range(12):
-        migrated = subprocess.call([sys.executable, "manage.py", "migrate", "--noinput"])
-        if migrated == 0:
-            subprocess.call([sys.executable, "manage.py", "seed_demo"])
+    try:
+        if _service_is_ready():
             return
-        time.sleep(5)
+    except Exception:
+        pass
+    from django.core.management import call_command
+    from django.db import connections
+
+    for _ in range(12):
+        try:
+            call_command("migrate", interactive=False, verbosity=0)
+            call_command("seed_demo", verbosity=1)
+            return
+        except Exception:
+            time.sleep(5)
+        finally:
+            connections.close_all()
 
 
 def main() -> None:

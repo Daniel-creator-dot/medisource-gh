@@ -107,6 +107,7 @@ def test_command_center_counts_come_from_records(api):
     assert data["board"]["invoice_weeks"][0]["agency_fee"] == "70.20"
     assert data["board"]["payroll_approvals"] == []
     assert data["board"]["net_profitability"] is None
+    assert len([row for row in data["board"]["timeline"] if row["is_today"]]) == 5
     assert any(cell["unfilled"] == 1 for site in data["board"]["heatmap"] for cell in site["days"])
 
 

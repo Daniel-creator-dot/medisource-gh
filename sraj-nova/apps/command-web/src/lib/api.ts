@@ -13,7 +13,7 @@ export const apiGet = cache(async function apiGet<T>(path: string): Promise<ApiR
     response = await fetch(`${api}/api/v1${path}`, {
       headers: { cookie: jar.toString(), accept: "application/json" },
       cache: "no-store",
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(70000),
     });
   } catch {
     return { status: 503, data: null, message: "The API did not answer. Wait a moment and try again." };

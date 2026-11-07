@@ -30,7 +30,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
       body: request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer(),
       redirect: "manual",
       cache: "no-store",
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(70000),
     });
     const text = await response.text();
     const type = response.headers.get("content-type") || "";
